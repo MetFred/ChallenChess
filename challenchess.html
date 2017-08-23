@@ -5,7 +5,15 @@
 		<script src="tools.js"></script>
 		<script src="challenchess.js"></script>
 	</head>
-	<body onload="initDocument();">
-		ChallenChess
+	<body onload="initDocument();" onresize="documentResized(event);">
+		<div id="main_menu" class="moved_out"
+			<p>MAIN MENU <span class="clickable" onclick="closeMainMenu();">[X]</span></p>
+		</div>
+		<div id="pause_layer" onclick="closeMainMenu();"></div>
+		<div id="main_menu_anchor" class="clickable dash cell" onclick="openMainMenu();">· · ·</div>
+		<div id="board_area" class="dash cell">
+			<div id="board"></div>
+		</div>
+		<div id="status_line" class="dash cell"></div>
 	</body>
 </html>

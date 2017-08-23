@@ -1,1 +1,116 @@
-/* body { background-color: #c0c0c0; } */
+body {
+	font: 1rem 'Segoe UI','DejaVu Sans',Calibri,Helvetica;
+	margin: 0px;
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	display: grid;
+	grid-template-rows: 1.5em 1fr 1.5em;
+	grid-template-columns: 1fr;
+}
+
+.dash {
+	border: black 1px dashed;
+}
+
+.cell {
+	grid-column: auto / auto;
+	grid-row: auto / auto;
+}
+
+#main_menu {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	height: 420px;
+	overflow: hidden;
+	border: white 3px solid;
+	font-weight: bold;
+	font-size: 2rem;
+	color: white;
+	padding: 50px;
+	text-align: center;
+	z-index: 42;
+}
+
+#main_menu.moved_out {
+	top: -526px;  /* influenced by height + 2*border-width + 2*padding */
+	transition: top 0.5s ease-in-out;
+}
+
+#main_menu:not(.moved_out) {
+	top: 0px;
+	transition: top 0.5s ease-in-out;
+}
+
+#main_menu_anchor {
+	text-align: center;
+}
+
+.clickable {
+	cursor: pointer;
+}
+
+#pause_layer {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	background-color: black;
+	z-index: 41;
+}
+
+#pause_layer.faded {
+	height: 100%;
+	opacity: 0.7;
+	transition: opacity 0.5s linear;
+}
+
+#pause_layer:not(.faded) {
+	height: 0%;
+	opacity: 0;
+	transition: height 0s 0.5s, opacity 0.5s linear;
+}
+
+#board {
+	display: none;
+	position: absolute;
+	border: #7f7f7f 1px solid;
+}
+
+/* evtl. später durch dynamische CSS-Klassen ersetzen (per JS erzeugt) */
+.board7 {
+	display: grid;
+	grid-template-rows: repeat(7, 1fr);
+	grid-template-columns: repeat(7, 1fr);
+}
+.board8 {
+	display: grid;
+	grid-template-rows: repeat(8, 1fr);
+	grid-template-columns: repeat(8, 1fr);
+}
+
+.field {
+	grid-column: auto / auto;
+	grid-row: auto / auto;
+	padding: 1%;
+	box-shadow: 10px 7px 10px grey;
+	z-index: 1;
+}
+.hidden {
+	visibility: hidden;
+}
+.black {
+	color: white;
+	background-color: black;
+	outline: 1px solid white;
+	outline-offset: -2px;
+}
+.white {
+	color: black;
+	background-color: white;
+	outline: 1px solid black;
+	outline-offset: -2px;
+}

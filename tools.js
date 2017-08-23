@@ -1,6 +1,6 @@
 /**
  * Decodes window.location.search and returns the parameters as key value pairs.
- * @return {object} dictionary (associative array) of key value pairs
+ * @return {Object} dictionary (associative array) of key value pairs
  */
 function getQueryParametersDict() {
 	return window.location.search ? stringToDict(decodeURI(window.location.search.substring(1)),"&") : {};
@@ -11,7 +11,7 @@ function getQueryParametersDict() {
  * @param {String} s source string to be decoded
  * @param {String} pairSep separator string between the pairs, defaults to semicolon (";")
  * @param {String} keyValueSep separator string between key and value for each pair, defaults to equal sign ("=")
- * @return {object} dictionary (associative array) of key value pairs
+ * @return {Object} dictionary (associative array) of key value pairs
  */
 function stringToDict(s, pairSep=";", keyValueSep="=") {
 	result = {};
@@ -50,11 +50,57 @@ function getElementPosition(element) {
 }
 
 /**
+ * Creates a rectangle object which has the attributes left, top, right,
+ * bottom, width, and height.
+ * Setting values via the methods setLeft, setTop etc. automatically
+ * adjusts the depending attributes.
+ * @param {Number} left smallest x value of the rectangle
+ * @param {Number} top smallest y value of the rectangle
+ * @param {Number} width x span of the rectangle
+ * @param {Number} height y span of the rectangle
+ * @return {Object} rectangle object
+ */
+function createRectangle(left=0, top=0, width=0, height=0) {
+	return {
+		left: left,
+		top: top,
+		width: width,
+		height: height,
+		right: left+width,
+		bottom: top+height,
+		setLeft: function(newValue) {
+			this.left = newValue;
+			this.right = this.left + this.width;
+		},
+		setTop: function(newValue) {
+			this.top = newValue;
+			this.bottom = this.top + this.height;
+		},
+		setWidth: function(newValue) {
+			this.width = newValue;
+			this.right = this.left + this.width;
+		},
+		setHeight: function(newValue) {
+			this.height = newValue;
+			this.bottom = this.top + this.height;
+		},
+		setRight: function(newValue) {
+			this.right = newValue;
+			this.width = this.right - this.left;
+		},
+		setBottom: function(newValue) {
+			this.bottom = newValue;
+			this.height = this.bottom - this.top;
+		}
+	};
+}
+
+/**
  * Returns the "absolute" bounds (relative to the body) of the given element.
  * @param element as determined e.g. via document.getElementById()
- * @return {object} bounds as the object's left, top, width, height, right, and bottom properties
+ * @return {Object} bounds as the object's left, top, width, height, right, and bottom properties
  */
 function getElementBounds(element) {
 	var [left, top] = getElementPosition(element);
-	return {left: left, top: top, width: element.offsetWidth, height: element.offsetHeight, right: left+element.offsetWidth, bottom: top+element.offsetHeight};
+	return createRectangle(left, top, element.offsetWidth, element.offsetHeight);
 }

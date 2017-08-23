@@ -42,6 +42,7 @@ function getFieldPosition(fieldId) {
 	}
 }
 function fieldClicked(e) {
+	console.log("fieldClicked mit e.target.id = "+e.target.id);
 	fieldPos = getFieldPosition(e.target.id);
 	if (e.target.classList.contains(PMT)) {
 		if (fieldPos != null) {
