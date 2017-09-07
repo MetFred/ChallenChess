@@ -104,3 +104,30 @@ function getElementBounds(element) {
 	var [left, top] = getElementPosition(element);
 	return createRectangle(left, top, element.offsetWidth, element.offsetHeight);
 }
+
+/**
+ * Initialises the random number generator with a given seed.
+ * @param seed value for determination of the next random value
+ */
+function initRandomNumberGenerator(seed) {
+	// currently not possible
+}
+
+/**
+ * Returns a random number.
+ * @return {Number} random number x where 0 <= x < 1.
+ */
+function getRandomNumber() {
+	return Math.random();
+}
+
+/**
+ * Returns a randomly generated integer value between the given
+ * bounds.
+ * @param lowerBound lower bound, inclusive
+ * @param upperBound upper bound, exclusive
+ * @return {Number} integer value
+ */
+function getRandomInteger(lowerBound, upperBound) {
+	return lowerBound + Math.floor(getRandomNumber()*(upperBound-lowerBound));
+}
