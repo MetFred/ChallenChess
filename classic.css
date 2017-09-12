@@ -114,6 +114,18 @@ body {
 	outline: 1px solid black;
 	outline-offset: -2px;
 }
+.red {
+	color: black;
+	background-color: red;
+	outline: 1px solid black;
+	outline-offset: -2px;
+}
+.green {
+	color: white;
+	background-color: green;
+	outline: 1px solid black;
+	outline-offset: -2px;
+}
 
 .figure {
 	position: absolute;

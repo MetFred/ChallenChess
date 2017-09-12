@@ -1,3 +1,9 @@
+
+/**
+ * Squareroot of 2 as constant to use for many calculations.
+ */ 
+const SQRT2 = Math.sqrt(2);
+
 /**
  * Decodes window.location.search and returns the parameters as key value pairs.
  * @return {Object} dictionary (associative array) of key value pairs
@@ -106,28 +112,38 @@ function getElementBounds(element) {
 }
 
 /**
- * Initialises the random number generator with a given seed.
+ * Creates a new object to generate random numbers. If a seed is given the generated
+ * numbers will be always the same  depending on the seed and the previous generated number.
  * @param seed value for determination of the next random value
+ * @return {Object} random number generator with seed and function to get next random number
  */
-function initRandomNumberGenerator(seed) {
-	// currently not possible
-}
-
-/**
- * Returns a random number.
- * @return {Number} random number x where 0 <= x < 1.
- */
-function getRandomNumber() {
-	return Math.random();
-}
-
-/**
- * Returns a randomly generated integer value between the given
- * bounds.
- * @param lowerBound lower bound, inclusive
- * @param upperBound upper bound, exclusive
- * @return {Number} integer value
- */
-function getRandomInteger(lowerBound, upperBound) {
-	return lowerBound + Math.floor(getRandomNumber()*(upperBound-lowerBound));
+function createRandomNumberGenerator(seed) {
+	return {
+		seed: seed, 
+	    number: seed * SQRT2 - Math.floor(seed * SQRT2),
+		/**
+		 * Returns a randomly generated integer value between 0 (inclusive) and 1 (exclusive).
+		 * @return {Number} integer value
+		 */		
+		next: function () {
+			this.number += this.number * this.seed * SQRT2;
+			this.number -= Math.floor(this.number);
+			return this.number;
+		},
+		/**
+		 * Returns a randomly generated integer value between the given bounds.
+		 * @param lowerBound lower bound, inclusive
+		 * @param upperBound upper bound, exclusive
+		 * @return {Number} integer value
+		 */
+		nextInt: function (lowerBound, upperBound) {
+			this.next();
+			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
+		},
+		nextObjectEntry: function (object) {
+			var keys = Object.keys(object);
+			var index = keys[nextInt(0, keys.length)];
+			return [index, keys[index]];
+		}
+	};
 }
