@@ -136,8 +136,10 @@ function fieldClicked(field) {
 }
 
 function moveCurrentFigureTo(field) {
+	fieldMatrix[currentFigure.y][currentFigure.x].figure = null;
 	currentFigure.x = field.x;
 	currentFigure.y = field.y;
+	fieldMatrix[currentFigure.y][currentFigure.x].figure = currentFigure;
 	repositionFigure(currentFigure, true);
 }
 
@@ -185,9 +187,27 @@ function createField(x, y, blackWhiteOffset) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function generateRandomLevel(options) {
+	var rand = createRandomNumberGenerator(options.seed);
+	var currentField = fieldMatrix[rand.nextInt(0, fieldMatrix.length)][rand.nextInt(0, fieldMatrix[0].length)];
+	var currentColour = COLOUR_ENUM.WHITE;
+	var stepCount = rand.nextInt(options.stepCountMin, options.stepCountMax);
 	figureList = [];
-	rand = createRandomNumberGenerator(options.seed);
-	currentFigure = createFigure({x: rand.nextInt(0, 8), y: rand.nextInt(0, 8), type: FIGURE_ENUM.KNIGHT, colour: COLOUR_ENUM.WHITE});
+	currentField.domElement.classList.add("red");
+	createFigure({x: currentField.x, y: currentField.y, type: FIGURE_ENUM.KING, colour: COLOUR_ENUM.BLACK});
+	for (var i=0;i<stepCount;++i) {
+		var possibleMoves = [];
+		Object.keys(MOVEMENT_ENUM).forEach(function (figure) {
+			getPossibleMoves(currentField, figure).forEach(function (possibleMove) {
+				possibleMoves.push(possibleMove);
+			});
+		});
+		var move = possibleMoves[rand.nextInt(0, possibleMoves.length)];
+		currentField = fieldMatrix[move.y][move.x];
+		createFigure({x: currentField.x, y: currentField.y, type: move.figure, colour: currentColour});
+		currentColour = (currentColour == COLOUR_ENUM.BLACK ? COLOUR_ENUM.WHITE : COLOUR_ENUM.BLACK);
+	}
+	currentField.domElement.classList.add("green");
+	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
 }
 
 /**
@@ -207,6 +227,7 @@ function createFigure(options) {
 	figure.src = "img/" + result.type + "_" + result.colour + "_test.svg";
 	boardArea.appendChild(figure);
 	figureList.push(result);
+	fieldMatrix[options.y][options.x].figure = result;
 	return result;
 }
 
@@ -223,7 +244,7 @@ function updatePossibleMoves() {
 			fieldMatrix[move.y][move.x].moveable = false;
 		});
 	}
-	moves = getPossibleMoves();
+	moves = getPossibleMoves(currentFigure, currentFigure.type);
 	moves.forEach(function (move) {
 		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
 		fieldMatrix[move.y][move.x].moveable = true;
@@ -231,13 +252,52 @@ function updatePossibleMoves() {
 	oldMoves = moves;
 }
 
-function getPossibleMoves() {
+function getPossibleMoveFields(x, y, dx, dy, figure) {
+	var result = [];
+	var mx = x + dx;
+	var my = y + dy;
+	while (mx >= 0 && mx < fieldMatrix[0].length && 
+	       my >= 0 && my < fieldMatrix.length && 
+		   fieldMatrix[my][mx].figure == null) 
+	{
+		result.push({x: mx, y: my, figure: figure});
+		mx = mx + dx;
+		my = my + dy;
+	}
+	return result;
+}
+
+function getPossibleMoves(field, figure) {
 	result = [];
-	MOVEMENT_ENUM[currentFigure.type].forEach(function (move) {
-		var newX = currentFigure.x + move.deltaX;
-		var newY = currentFigure.y + move.deltaY;
-		if (0 <= newX && newX < 8 && 0 <= newY && newY < 8) {
-			result.push({x: newX, y: newY});
+	MOVEMENT_ENUM[figure].forEach(function (move) {
+		if (move == null) {
+			alert("AHA " + field.x + " - " + field.y);
+		}
+		if (move.deltaX == 'n' && move.deltaY == 'n') {
+			result = result.concat(getPossibleMoveFields(field.x, field.y,  1,  1, figure));
+			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, -1, figure));
+			
+		} else if ((move.deltaX == 'n' && move.deltaY == '-n') || (move.deltaX == '-n' && move.deltaY == 'n')) {
+			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, -1, figure));
+			result = result.concat(getPossibleMoveFields(field.x, field.y, -1,  1, figure));
+			
+		} else if (move.deltaX == 'n') {
+			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, 0, figure));
+			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, 0, figure));
+			
+		} else if (move.deltaY == 'n') {
+			result = result.concat(getPossibleMoveFields(field.x, field.y, 0,  1, figure));
+			result = result.concat(getPossibleMoveFields(field.x, field.y, 0, -1, figure));
+		
+		} else {
+			var tx = field.x + move.deltaX;
+			var ty = field.y + move.deltaY;
+			if (tx >= 0 && tx < fieldMatrix[0].length && 
+				ty >= 0 && ty < fieldMatrix.length && 
+				fieldMatrix[ty][tx].figure == null)
+			{
+				result.push({x: tx, y: ty, figure: figure});
+			}
 		}
 	});
 	return result;
