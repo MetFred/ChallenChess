@@ -118,20 +118,27 @@ function mergeDicts(values, defaults) {
  */
 function initNewGame(options={}) {
 	var opts = mergeDicts(options, DEFAULT_OPTIONS);
-	if (options.seed != null) {
-		initRandomNumberGenerator(options.seed);
-	}
 	initChessboard(opts);
 	generateRandomLevel(opts);
-	repositionFigures();
-	showPotentialMovingTargets();
+	repositionAllFigures();
+	updatePossibleMoves();
 }
 
 /**
  * Callback function for clicking a field on the chess board.
- * @param {Object} event click event
+ * @param {Object} field object
  */
-function fieldClicked(event) {
+function fieldClicked(field) {
+	if (field.moveable) {
+		moveCurrentFigureTo(field);
+		updatePossibleMoves();
+	}
+}
+
+function moveCurrentFigureTo(field) {
+	currentFigure.x = field.x;
+	currentFigure.y = field.y;
+	repositionFigure(currentFigure, true);
 }
 
 /**
@@ -150,19 +157,26 @@ function initChessboard(options) {
 	for (var y = 0; y < xFields; ++y) {
 		fieldMatrix.push([]);
 		for (var x = 0; x < xFields; ++x) {
-			var field = document.createElement("div");
-			field.id = "field_"+x+"_"+y;
-			field.classList.add("field");
-			field.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
-			/*if (3 <= x && x <= 4 && 3 <= y && y <= 4) {
-				field.classList.add("hidden");
-			}*/
-			field.onclick = fieldClicked;
-			//field.innerHTML = x+";"+y;  //field.id;
-			board.appendChild(field);
-			fieldMatrix[y].push({x: x, y: y, domElement: field, figure: null});
+			board.appendChild(createField(x, y, blackWhiteOffset).domElement);
 		}
 	}
+}
+
+function createField(x, y, blackWhiteOffset) {
+	var result = {x: x,
+		          y: y,
+		          domElement: document.createElement("div"),
+		          figure: null};
+	result.onClick = function(e) {
+		fieldClicked(result);
+	};
+	result.domElement.id = "field_"+x+"_"+y;
+	result.domElement.classList.add("field");
+	result.domElement.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
+	result.domElement.onclick = result.onClick;
+	result.moveable = false;
+	fieldMatrix[y].push(result);
+	return result;
 }
 
 /**
@@ -172,7 +186,8 @@ function initChessboard(options) {
  */
 function generateRandomLevel(options) {
 	figureList = [];
-	currentFigure = createFigure({x: getRandomInteger(0, 8), y: getRandomInteger(0, 8), type: FIGURE_ENUM.KNIGHT, colour: COLOUR_ENUM.WHITE});
+	rand = createRandomNumberGenerator(options.seed);
+	currentFigure = createFigure({x: rand.nextInt(0, 8), y: rand.nextInt(0, 8), type: FIGURE_ENUM.KNIGHT, colour: COLOUR_ENUM.WHITE});
 }
 
 /**
@@ -195,11 +210,37 @@ function createFigure(options) {
 	return result;
 }
 
+var oldMoves = null;
+
 /**
  * Highlights those fields on the chess board which the player can
  * move to.
  */
-function showPotentialMovingTargets() {
+function updatePossibleMoves() {
+	if (oldMoves != null) {
+		oldMoves.forEach(function (move) {
+			fieldMatrix[move.y][move.x].domElement.classList.remove("possible_move");
+			fieldMatrix[move.y][move.x].moveable = false;
+		});
+	}
+	moves = getPossibleMoves();
+	moves.forEach(function (move) {
+		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
+		fieldMatrix[move.y][move.x].moveable = true;
+	});
+	oldMoves = moves;
+}
+
+function getPossibleMoves() {
+	result = [];
+	MOVEMENT_ENUM[currentFigure.type].forEach(function (move) {
+		var newX = currentFigure.x + move.deltaX;
+		var newY = currentFigure.y + move.deltaY;
+		if (0 <= newX && newX < 8 && 0 <= newY && newY < 8) {
+			result.push({x: newX, y: newY});
+		}
+	});
+	return result;
 }
 
 /**
@@ -236,16 +277,25 @@ function repositionChessboard() {
  * Recomputes the position of all figures which are currently placed
  * on the chess board.
  */
-function repositionFigures() {
+function repositionAllFigures() {
 	figureList.forEach(function(figure) {
-		if ("domElement" in figure && figure.domElement != null) {
-			var bounds = getElementBounds(fieldMatrix[figure.y][figure.x].domElement);
-			figure.domElement.style.left = (bounds.left+FIGURE_MARGIN) + "px";
-			figure.domElement.style.top = (bounds.top+FIGURE_MARGIN) + "px";
-			figure.domElement.style.width = (bounds.width - 2*FIGURE_MARGIN) + "px";
-			figure.domElement.style.height = (bounds.height - 2*FIGURE_MARGIN) + "px";
-		}
+		repositionFigure(figure);
 	});
+}
+
+function repositionFigure(figure, smooth=false) {
+	if ("domElement" in figure && figure.domElement != null) {
+		if (smooth) {
+			figure.domElement.classList.add("smooth_movement");
+		} else {
+			figure.domElement.classList.remove("smooth_movement");
+		}
+		var bounds = getElementBounds(fieldMatrix[figure.y][figure.x].domElement);
+		figure.domElement.style.left = (bounds.left+FIGURE_MARGIN) + "px";
+		figure.domElement.style.top = (bounds.top+FIGURE_MARGIN) + "px";
+		figure.domElement.style.width = (bounds.width - 2*FIGURE_MARGIN) + "px";
+		figure.domElement.style.height = (bounds.height - 2*FIGURE_MARGIN) + "px";
+	}
 }
 
 /**
@@ -255,5 +305,5 @@ function repositionFigures() {
  */
 function documentResized(event) {
 	repositionChessboard();
-	repositionFigures();
+	repositionAllFigures();
 }

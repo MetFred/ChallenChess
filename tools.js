@@ -1,7 +1,7 @@
 
 /**
  * Squareroot of 2 as constant to use for many calculations.
- */ 
+ */
 const SQRT2 = Math.sqrt(2);
 
 /**
@@ -114,17 +114,17 @@ function getElementBounds(element) {
 /**
  * Creates a new object to generate random numbers. If a seed is given the generated
  * numbers will be always the same  depending on the seed and the previous generated number.
- * @param seed value for determination of the next random value
+ * @param seed value for determination of the next random value, if null it will be taken from Math.random()
  * @return {Object} random number generator with seed and function to get next random number
  */
 function createRandomNumberGenerator(seed) {
-	return {
-		seed: seed, 
-	    number: seed * SQRT2 - Math.floor(seed * SQRT2),
+	result = {
+		seed: null,
+	    number: null,
 		/**
 		 * Returns a randomly generated integer value between 0 (inclusive) and 1 (exclusive).
 		 * @return {Number} integer value
-		 */		
+		 */
 		next: function () {
 			this.number += this.number * this.seed * SQRT2;
 			this.number -= Math.floor(this.number);
@@ -146,4 +146,7 @@ function createRandomNumberGenerator(seed) {
 			return [index, keys[index]];
 		}
 	};
+	result.seed = (seed == null) ? Math.random() : seed;
+	result.number = result.seed * SQRT2 - Math.floor(result.seed * SQRT2);
+	return result;
 }

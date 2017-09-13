@@ -127,10 +127,20 @@ body {
 	outline-offset: -2px;
 }
 
+.possible_move.white {
+	background-color: #00ff00;
+}
+.possible_move.black {
+	background-color: #007f00;
+}
+
 .figure {
 	position: absolute;
 	left: 20px;
 	top: 20px;
 	z-index: 23;
+}
+
+.figure.smooth_movement {
 	transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
 }
