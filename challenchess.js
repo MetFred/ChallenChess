@@ -208,6 +208,7 @@ function generateRandomLevel(options) {
 	}
 	currentField.domElement.classList.add("green");
 	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
+	currentFigure.domElement.classList.add("current_figure");
 }
 
 /**
@@ -256,9 +257,9 @@ function getPossibleMoveFields(x, y, dx, dy, figure) {
 	var result = [];
 	var mx = x + dx;
 	var my = y + dy;
-	while (mx >= 0 && mx < fieldMatrix[0].length && 
-	       my >= 0 && my < fieldMatrix.length && 
-		   fieldMatrix[my][mx].figure == null) 
+	while (mx >= 0 && mx < fieldMatrix[0].length &&
+	       my >= 0 && my < fieldMatrix.length &&
+		   fieldMatrix[my][mx].figure == null)
 	{
 		result.push({x: mx, y: my, figure: figure});
 		mx = mx + dx;
@@ -276,24 +277,24 @@ function getPossibleMoves(field, figure) {
 		if (move.deltaX == 'n' && move.deltaY == 'n') {
 			result = result.concat(getPossibleMoveFields(field.x, field.y,  1,  1, figure));
 			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, -1, figure));
-			
+
 		} else if ((move.deltaX == 'n' && move.deltaY == '-n') || (move.deltaX == '-n' && move.deltaY == 'n')) {
 			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, -1, figure));
 			result = result.concat(getPossibleMoveFields(field.x, field.y, -1,  1, figure));
-			
+
 		} else if (move.deltaX == 'n') {
 			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, 0, figure));
 			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, 0, figure));
-			
+
 		} else if (move.deltaY == 'n') {
 			result = result.concat(getPossibleMoveFields(field.x, field.y, 0,  1, figure));
 			result = result.concat(getPossibleMoveFields(field.x, field.y, 0, -1, figure));
-		
+
 		} else {
 			var tx = field.x + move.deltaX;
 			var ty = field.y + move.deltaY;
-			if (tx >= 0 && tx < fieldMatrix[0].length && 
-				ty >= 0 && ty < fieldMatrix.length && 
+			if (tx >= 0 && tx < fieldMatrix[0].length &&
+				ty >= 0 && ty < fieldMatrix.length &&
 				fieldMatrix[ty][tx].figure == null)
 			{
 				result.push({x: tx, y: ty, figure: figure});
