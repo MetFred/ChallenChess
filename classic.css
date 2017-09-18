@@ -114,15 +114,15 @@ body {
 	outline: 1px solid black;
 	outline-offset: -2px;
 }
-.red {
+.target_field {
 	color: black;
 	background-color: red;
 	outline: 1px solid black;
 	outline-offset: -2px;
 }
-.green {
+.start_field {
 	color: white;
-	background-color: green;
+	background-color: #0000bb;
 	outline: 1px solid black;
 	outline-offset: -2px;
 }
@@ -142,28 +142,48 @@ body {
 }
 
 .figure.smooth_movement {
-	transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+	transition: left 750ms ease-in-out, top 750ms ease-in-out;
 }
 
 .current_figure {
-	transform-origin: 50% 100%;
-	animation: pulsing 1.5s linear infinite;
 }
 
-@keyframes pulsing {
+.swinging {
+	transform-origin: 50% 100%;
+	animation: reggae 716.085ms linear alternate infinite;
+}
+
+@keyframes reggae {
 	0% {
-		transform: rotate(-10deg) scale(1.1);
+		transform: skewX(-7deg) scaleY(1.05);
 	}
-	25% {
-		transform: rotate(0deg) scale(0.9);
+	20% {
+		transform: skewX(-5deg) scaleY(1);
 	}
 	50% {
-		transform: rotate(10deg) scale(1.1);
+		transform: skewX(0deg) scaleY(0.95);
 	}
-	75% {
-		transform: rotate(0deg) scale(0.9);
+	80% {
+		transform: skewX(5deg) scaleY(1);
 	}
 	100% {
-		transform: rotate(-10deg) scale(1.1);
+		transform: skewX(7deg) scaleY(1.05);
+	}
+}
+
+.walking {
+	transform-origin: 50% 100%;
+	animation: walking_steps 125ms linear alternate infinite;
+}
+
+@keyframes walking_steps {
+	0% {
+		transform: scaleX(0.95) scaleY(1.1);
+	}
+	50% {
+		transform: scaleX(1) scaleY(1);
+	}
+	100% {
+		transform: scaleX(1.05) scaleY(0.95);
 	}
 }

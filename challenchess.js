@@ -131,7 +131,11 @@ function initNewGame(options={}) {
 function fieldClicked(field) {
 	if (field.moveable) {
 		moveCurrentFigureTo(field);
-		updatePossibleMoves();
+		clearPossibleMoves();
+		window.setTimeout(function() {
+			moveEnded();
+			updatePossibleMoves();
+		}, 750);
 	}
 }
 
@@ -141,6 +145,13 @@ function moveCurrentFigureTo(field) {
 	currentFigure.y = field.y;
 	fieldMatrix[currentFigure.y][currentFigure.x].figure = currentFigure;
 	repositionFigure(currentFigure, true);
+}
+
+function moveEnded() {
+	if (currentFigure != null) {
+		currentFigure.domElement.classList.remove("walking");
+		currentFigure.domElement.classList.add("swinging");
+	}
 }
 
 /**
@@ -192,7 +203,7 @@ function generateRandomLevel(options) {
 	var currentColour = COLOUR_ENUM.WHITE;
 	var stepCount = rand.nextInt(options.stepCountMin, options.stepCountMax);
 	figureList = [];
-	currentField.domElement.classList.add("red");
+	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: FIGURE_ENUM.KING, colour: COLOUR_ENUM.BLACK});
 	for (var i=0;i<stepCount;++i) {
 		var possibleMoves = [];
@@ -206,9 +217,10 @@ function generateRandomLevel(options) {
 		createFigure({x: currentField.x, y: currentField.y, type: move.figure, colour: currentColour});
 		currentColour = (currentColour == COLOUR_ENUM.BLACK ? COLOUR_ENUM.WHITE : COLOUR_ENUM.BLACK);
 	}
-	currentField.domElement.classList.add("green");
+	currentField.domElement.classList.add("start_field");
 	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
 	currentFigure.domElement.classList.add("current_figure");
+	currentFigure.domElement.classList.add("swinging");
 }
 
 /**
@@ -234,17 +246,21 @@ function createFigure(options) {
 
 var oldMoves = null;
 
-/**
- * Highlights those fields on the chess board which the player can
- * move to.
- */
-function updatePossibleMoves() {
+function clearPossibleMoves() {
 	if (oldMoves != null) {
 		oldMoves.forEach(function (move) {
 			fieldMatrix[move.y][move.x].domElement.classList.remove("possible_move");
 			fieldMatrix[move.y][move.x].moveable = false;
 		});
 	}
+}
+
+/**
+ * Highlights those fields on the chess board which the player can
+ * move to.
+ */
+function updatePossibleMoves() {
+	clearPossibleMoves();
 	moves = getPossibleMoves(currentFigure, currentFigure.type);
 	moves.forEach(function (move) {
 		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
@@ -348,6 +364,8 @@ function repositionFigure(figure, smooth=false) {
 	if ("domElement" in figure && figure.domElement != null) {
 		if (smooth) {
 			figure.domElement.classList.add("smooth_movement");
+			figure.domElement.classList.remove("swinging");
+			figure.domElement.classList.add("walking");
 		} else {
 			figure.domElement.classList.remove("smooth_movement");
 		}
