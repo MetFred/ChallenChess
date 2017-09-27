@@ -8,7 +8,7 @@ const FIGURE_MARGIN = 10;
 /**
  * Enumeration of chess pieces.
  */
-const FIGURE_ENUM = { PAWN: "pawn", ROOK: "rook", KNIGHT: "knight", BISHOP: "bishop", QUEEN: "queen", KING: "king" };
+const FIGURE_ENUM = { "PAWN": "pawn", "ROOK": "rook", "KNIGHT": "knight", "BISHOP": "bishop", "QUEEN": "queen", "KING": "king" };
 
 /**
  * Enumeration of chess colours.
@@ -31,10 +31,12 @@ const MOVEMENT_ENUM = { "pawn":   [{deltaX: 0, deltaY: 1}],
  */
 const CAPTURE_ENUM = { "pawn": [{deltaX: -1, deltaY: 1}, {deltaX: 1, deltaY: 1}] };
 
+const CAPTURE_MOVEMENT_ENUM = mergeDicts(CAPTURE_ENUM, MOVEMENT_ENUM);
+
 /**
  * Colour-based enumeration of directions.
  */
-const MOVEMENT_DIRECTION_ENUM = { "white": 1, "black": -1 };
+const MOVEMENT_DIRECTION_ENUM = { "white": -1, "black": 1 };
 
 /**
  * The figure which the player can control.
@@ -53,6 +55,17 @@ var figureList = null;
  * x starting with 0 from the left.
  */
 var fieldMatrix = null;
+
+/**
+ * Determines whether a specified position lies within the chess board's
+ * field matrix.
+ * @param {Number} x column position, starting from 0
+ * @param {Number} y row position, starting from 0
+ * @return {Boolean} whether the position lies within the field matrix
+ */
+function isPositionInField(x, y) {
+	return (fieldMatrix != null && isBetween(0, x, fieldMatrix[0].length-1) && isBetween(0, y, fieldMatrix.length-1));
+}
 
 /**
  * Initialises the document.
@@ -92,26 +105,6 @@ function closeMainMenu() {
 const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 8, "yFieldsMin": 8, "yFieldsMax": 8, "stepCountMin": 8, "stepCountMax": 8, "seed": null}
 
 /**
- * Merges two dictionaries by creating a new one and copying all values
- * from both to the result.
- * @param {Object} values dictionary which values will be favoured
- * @param {Object} defaults dictionary which provides the values which
- *                          will be taken where values does not have
- *                          the corresponding attribute
- * @return {Object} combined dictionary
- */
-function mergeDicts(values, defaults) {
-	var result = {};
-	for (var key in defaults) {
-		result[key] = defaults[key];
-	}
-	for (var key in values) {
-		result[key] = values[key];
-	}
-	return result;
-}
-
-/**
  * Initialises a new game using the given options.
  * @param {Object} options if a specific option is not present here,
  *                         it will be taken from DEFAULT_OPTIONS
@@ -130,10 +123,11 @@ function initNewGame(options={}) {
  */
 function fieldClicked(field) {
 	if (field.moveable) {
+		var figureOnTargetField = fieldMatrix[field.y][field.x].figure;
 		moveCurrentFigureTo(field);
 		clearPossibleMoves();
 		window.setTimeout(function() {
-			moveEnded();
+			moveEnded(figureOnTargetField);
 			updatePossibleMoves();
 		}, 750);
 	}
@@ -147,10 +141,22 @@ function moveCurrentFigureTo(field) {
 	repositionFigure(currentFigure, true);
 }
 
-function moveEnded() {
+function moveEnded(figureOnTargetField) {
 	if (currentFigure != null) {
+		if (figureOnTargetField != null) {
+			removeFigure(currentFigure);
+			currentFigure = figureOnTargetField;
+		}
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("swinging");
+	}
+}
+
+function removeFigure(figure) {
+	if (figure != null) {
+		fieldMatrix[figure.y][figure.x].figure = null;
+		var boardArea = document.getElementById("board_area");
+		boardArea.removeChild(figure.domElement);
 	}
 }
 
@@ -200,22 +206,40 @@ function createField(x, y, blackWhiteOffset) {
 function generateRandomLevel(options) {
 	var rand = createRandomNumberGenerator(options.seed);
 	var currentField = fieldMatrix[rand.nextInt(0, fieldMatrix.length)][rand.nextInt(0, fieldMatrix[0].length)];
-	var currentColour = COLOUR_ENUM.WHITE;
+	var currentColour = COLOUR_ENUM.BLACK;
 	var stepCount = rand.nextInt(options.stepCountMin, options.stepCountMax);
 	figureList = [];
 	currentField.domElement.classList.add("target_field");
-	createFigure({x: currentField.x, y: currentField.y, type: FIGURE_ENUM.KING, colour: COLOUR_ENUM.BLACK});
+	createFigure({x: currentField.x, y: currentField.y, type: FIGURE_ENUM.KING, colour: currentColour});
 	for (var i=0;i<stepCount;++i) {
 		var possibleMoves = [];
-		Object.keys(MOVEMENT_ENUM).forEach(function (figure) {
-			getPossibleMoves(currentField, figure).forEach(function (possibleMove) {
+		Object.values(FIGURE_ENUM).forEach(function (figureType) {
+			getPossibleMoves(currentField, figureType, currentColour, CAPTURE_MOVEMENT_ENUM, false).forEach(function (possibleMove) {
 				possibleMoves.push(possibleMove);
 			});
 		});
-		var move = possibleMoves[rand.nextInt(0, possibleMoves.length)];
+		var reducedMoves = []
+		if (possibleMoves.length > 0) {
+			var figureType = possibleMoves[0].figureType;
+			var iFrom = 0;
+			var iTo = 0;
+			possibleMoves.forEach(function (move, i) {
+				if (move.figureType != figureType) {
+					iTo = i;
+					reducedMoves.push(possibleMoves[rand.nextInt(iFrom, iTo)]);
+					iFrom = i;
+					figureType = move.figureType;
+				}
+			});
+			reducedMoves.push(possibleMoves[rand.nextInt(iFrom, possibleMoves.length)]);
+		}
+		if (reducedMoves.length == 0) {
+			return;
+		}
+		var move = reducedMoves[rand.nextInt(0, reducedMoves.length)];
 		currentField = fieldMatrix[move.y][move.x];
-		createFigure({x: currentField.x, y: currentField.y, type: move.figure, colour: currentColour});
 		currentColour = (currentColour == COLOUR_ENUM.BLACK ? COLOUR_ENUM.WHITE : COLOUR_ENUM.BLACK);
+		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
 	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
@@ -261,7 +285,7 @@ function clearPossibleMoves() {
  */
 function updatePossibleMoves() {
 	clearPossibleMoves();
-	moves = getPossibleMoves(currentFigure, currentFigure.type);
+	moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
 	moves.forEach(function (move) {
 		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
 		fieldMatrix[move.y][move.x].moveable = true;
@@ -269,51 +293,67 @@ function updatePossibleMoves() {
 	oldMoves = moves;
 }
 
-function getPossibleMoveFields(x, y, dx, dy, figure) {
+function getPossibleMoveFields(x, y, dx, dy, figureType, figureColour) {
 	var result = [];
 	var mx = x + dx;
 	var my = y + dy;
-	while (mx >= 0 && mx < fieldMatrix[0].length &&
-	       my >= 0 && my < fieldMatrix.length &&
-		   fieldMatrix[my][mx].figure == null)
-	{
-		result.push({x: mx, y: my, figure: figure});
+	while (isPositionInField(mx, my) && fieldMatrix[my][mx].figure == null) {
+		result.push({x: mx, y: my, figureType: figureType});
 		mx = mx + dx;
 		my = my + dy;
 	}
 	return result;
 }
 
-function getPossibleMoves(field, figure) {
-	result = [];
-	MOVEMENT_ENUM[figure].forEach(function (move) {
-		if (move == null) {
-			alert("AHA " + field.x + " - " + field.y);
+function getPossibleCaptureFields(x, y, dx, dy, figureType, figureColour) {
+	var result = [];
+	var mx = x + dx;
+	var my = y + dy;
+	while (isPositionInField(mx, my)) {
+		var otherFigure = fieldMatrix[my][mx].figure;
+		if (otherFigure != null) {
+			if (otherFigure.colour != figureColour) {
+				result.push({x: mx, y: my, figureType: figureType});
+			}
+			break;
 		}
+		mx = mx + dx;
+		my = my + dy;
+	}
+	return result;
+}
+
+function getPossibleMoves(field, figureType, figureColour, movementDefinitions, capturing) {
+	result = [];
+	var moveFunction = capturing ? getPossibleCaptureFields : getPossibleMoveFields;
+	movementDefinitions[figureType].forEach(function (move) {
+		var dir = MOVEMENT_DIRECTION_ENUM[figureColour];
 		if (move.deltaX == 'n' && move.deltaY == 'n') {
-			result = result.concat(getPossibleMoveFields(field.x, field.y,  1,  1, figure));
-			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, -1, figure));
-
+			result = result.concat(moveFunction(field.x, field.y,  1,  dir, figureType, figureColour));
+			result = result.concat(moveFunction(field.x, field.y, -1, -dir, figureType, figureColour));
 		} else if ((move.deltaX == 'n' && move.deltaY == '-n') || (move.deltaX == '-n' && move.deltaY == 'n')) {
-			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, -1, figure));
-			result = result.concat(getPossibleMoveFields(field.x, field.y, -1,  1, figure));
-
+			result = result.concat(moveFunction(field.x, field.y,  1, -dir, figureType, figureColour));
+			result = result.concat(moveFunction(field.x, field.y, -1,  dir, figureType, figureColour));
 		} else if (move.deltaX == 'n') {
-			result = result.concat(getPossibleMoveFields(field.x, field.y,  1, 0, figure));
-			result = result.concat(getPossibleMoveFields(field.x, field.y, -1, 0, figure));
-
+			result = result.concat(moveFunction(field.x, field.y,  1, 0, figureType, figureColour));
+			result = result.concat(moveFunction(field.x, field.y, -1, 0, figureType, figureColour));
 		} else if (move.deltaY == 'n') {
-			result = result.concat(getPossibleMoveFields(field.x, field.y, 0,  1, figure));
-			result = result.concat(getPossibleMoveFields(field.x, field.y, 0, -1, figure));
-
+			result = result.concat(moveFunction(field.x, field.y, 0,  dir, figureType, figureColour));
+			result = result.concat(moveFunction(field.x, field.y, 0, -dir, figureType, figureColour));
 		} else {
-			var tx = field.x + move.deltaX;
-			var ty = field.y + move.deltaY;
-			if (tx >= 0 && tx < fieldMatrix[0].length &&
-				ty >= 0 && ty < fieldMatrix.length &&
-				fieldMatrix[ty][tx].figure == null)
-			{
-				result.push({x: tx, y: ty, figure: figure});
+			var mx = field.x + move.deltaX;
+			var my = field.y + dir*move.deltaY;
+			if (isPositionInField(mx, my)) {
+				var otherFigure = fieldMatrix[my][mx].figure;
+				if (capturing) {
+					if (otherFigure != null && otherFigure.colour != figureColour) {
+						result.push({x: mx, y: my, figureType: figureType});
+					}
+				} else {
+					if (otherFigure == null) {
+						result.push({x: mx, y: my, figureType: figureType});
+					}
+				}
 			}
 		}
 	});

@@ -150,3 +150,34 @@ function createRandomNumberGenerator(seed) {
 	result.number = result.seed * SQRT2 - Math.floor(result.seed * SQRT2);
 	return result;
 }
+
+/**
+ * Tests whether a value lies between an upper and a lower bound.
+ * @param {Number} lowerBound lower bound, inclusive
+ * @param {Number} value check value
+ * @param {Number} upperBound upper bound, inclusive
+ * @return {Boolean} whether lowerBound <= value <= upperBound
+ */
+function isBetween(lowerBound, value, upperBound) {
+	return (lowerBound <= value && value <= upperBound);
+}
+
+/**
+ * Merges two dictionaries by creating a new one and copying all values
+ * from both to the result.
+ * @param {Object} values dictionary which values will be favoured
+ * @param {Object} defaults dictionary which provides the values which
+ *                          will be taken where values does not have
+ *                          the corresponding attribute
+ * @return {Object} combined dictionary
+ */
+function mergeDicts(values, defaults) {
+	var result = {};
+	for (var key in defaults) {
+		result[key] = defaults[key];
+	}
+	for (var key in values) {
+		result[key] = values[key];
+	}
+	return result;
+}

@@ -139,6 +139,7 @@ body {
 	left: 20px;
 	top: 20px;
 	z-index: 23;
+	pointer-events: none;
 }
 
 .figure.smooth_movement {
