@@ -39,6 +39,11 @@ const CAPTURE_MOVEMENT_ENUM = mergeDicts(CAPTURE_ENUM, MOVEMENT_ENUM);
 const MOVEMENT_DIRECTION_ENUM = { "white": -1, "black": 1 };
 
 /**
+ * Global random number generator instance.
+ */
+var rand = null;
+
+/**
  * The figure which the player can control.
  */
 var currentFigure = null;
@@ -102,7 +107,7 @@ function closeMainMenu() {
 /**
  * Default values for all game related attributes.
  */
-const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 8, "yFieldsMin": 8, "yFieldsMax": 8, "stepCountMin": 8, "stepCountMax": 8, "seed": null}
+const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yFieldsMax": 12, "stepCountMin": 12, "stepCountMax": 16, "seed": null}
 
 /**
  * Initialises a new game using the given options.
@@ -111,6 +116,7 @@ const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 8, "yFieldsMin": 8, "yFi
  */
 function initNewGame(options={}) {
 	var opts = mergeDicts(options, DEFAULT_OPTIONS);
+	rand = createRandomNumberGenerator(options.seed);
 	initChessboard(opts);
 	generateRandomLevel(opts);
 	repositionAllFigures();
@@ -166,10 +172,11 @@ function removeFigure(figure) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function initChessboard(options) {
-	var xFields = options.xFieldsMax;
+	var xFields = rand.nextInt(options.xFieldsMin, options.xFieldsMax + 1);
 	repositionChessboard();
 	board = document.getElementById("board");
 	board.innerHTML = "";  // alten Inhalt löschen
+	addCssClassToHead(".board"+xFields, "display:grid;grid-template-rows:repeat("+xFields+",1fr);grid-template-columns:repeat("+xFields+",1fr);");
 	board.classList.add("board"+xFields);
 	fieldMatrix = [];
 	var blackWhiteOffset = xFields % 2;  // Feld unten links muss schwarz werden
@@ -204,8 +211,7 @@ function createField(x, y, blackWhiteOffset) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function generateRandomLevel(options) {
-	var rand = createRandomNumberGenerator(options.seed);
-	var currentField = fieldMatrix[rand.nextInt(0, fieldMatrix.length)][rand.nextInt(0, fieldMatrix[0].length)];
+	var currentField = rand.nextArrayElement(rand.nextArrayElement(fieldMatrix));
 	var currentColour = COLOUR_ENUM.BLACK;
 	var stepCount = rand.nextInt(options.stepCountMin, options.stepCountMax);
 	figureList = [];
@@ -234,9 +240,9 @@ function generateRandomLevel(options) {
 			reducedMoves.push(possibleMoves[rand.nextInt(iFrom, possibleMoves.length)]);
 		}
 		if (reducedMoves.length == 0) {
-			return;
+			break;
 		}
-		var move = reducedMoves[rand.nextInt(0, reducedMoves.length)];
+		var move = rand.nextArrayElement(reducedMoves);
 		currentField = fieldMatrix[move.y][move.x];
 		currentColour = (currentColour == COLOUR_ENUM.BLACK ? COLOUR_ENUM.WHITE : COLOUR_ENUM.BLACK);
 		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});

@@ -43,6 +43,27 @@ function appendCssFileToHead(path) {
 }
 
 /**
+ * List of CSS classes which have been added to the head.
+ */
+var additionalCssClassNames = [];
+
+/**
+ * Will add a new CSS class to the head if it has not already been
+ * added.
+ * @param {String} className the class name, e.g. "span.new"
+ * @param {String} classStyleDefinition e.g. "color: black; font-weight: bold;"
+ */
+function addCssClassToHead(className, classStyleDefinition) {
+	if (additionalCssClassNames.indexOf(className) < 0) {
+		var style = document.createElement("style");
+		style.type = "text/css";
+		style.innerHTML = className + "{" + classStyleDefinition + "}";
+		document.getElementsByTagName('head')[0].appendChild(style);
+		additionalCssClassNames.push(className);
+	}
+}
+
+/**
  * Returns the "absolute" position (relative to the body) of the given element.
  * @param element as determined e.g. via document.getElementById()
  * @return {Array} left and top coordinates as an array's elements
@@ -139,6 +160,9 @@ function createRandomNumberGenerator(seed) {
 		nextInt: function (lowerBound, upperBound) {
 			this.next();
 			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
+		},
+		nextArrayElement: function (array) {
+			return (array.length >= 1 ? array[this.nextInt(0, array.length)] : null);
 		},
 		nextObjectEntry: function (object) {
 			var keys = Object.keys(object);
