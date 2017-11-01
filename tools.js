@@ -93,31 +93,64 @@ function createRectangle(left=0, top=0, width=0, height=0) {
 		top: top,
 		width: width,
 		height: height,
-		right: left+width,
-		bottom: top+height,
+		right: left + width - 1,
+		bottom: top + height - 1,
+		/**
+		 * Moves the rectangle in x direction. right will also be changed. width stays the same.
+		 * @param {Number} newValue new value for left
+		 */
 		setLeft: function(newValue) {
 			this.left = newValue;
-			this.right = this.left + this.width;
+			this.right = this.left + this.width - 1;
 		},
+		/**
+		 * Moves the rectangle in y direction. bottom will also be changed. height stays the same.
+		 * @param {Number} newValue new value for top
+		 */
 		setTop: function(newValue) {
 			this.top = newValue;
-			this.bottom = this.top + this.height;
+			this.bottom = this.top + this.height - 1;
 		},
+		/**
+		 * Resizes the rectangle in x direction. right will be changed. left stays the same.
+		 * @param {Number} newValue new value for width
+		 */
 		setWidth: function(newValue) {
 			this.width = newValue;
-			this.right = this.left + this.width;
+			this.right = this.left + this.width - 1;
 		},
+		/**
+		 * Resizes the rectangle in y direction. bottom will be changed. top stays the same.
+		 * @param {Number} newValue new value for height
+		 */
 		setHeight: function(newValue) {
 			this.height = newValue;
-			this.bottom = this.top + this.height;
+			this.bottom = this.top + this.height - 1;
 		},
+		/**
+		 * Resizes the rectangle in x direction. width will be changed. left stays the same.
+		 * @param {Number} newValue new value for right
+		 */
 		setRight: function(newValue) {
 			this.right = newValue;
-			this.width = this.right - this.left;
+			this.width = this.right - this.left + 1;
 		},
+		/**
+		 * Resizes the rectangle in y direction. height will be changed. top stays the same.
+		 * @param {Number} newValue new value for bottom
+		 */
 		setBottom: function(newValue) {
 			this.bottom = newValue;
-			this.height = this.bottom - this.top;
+			this.height = this.bottom - this.top + 1;
+		},
+		/**
+		 * Checks whether a specified point lies within the rectangle or on its borders.
+		 * @param {Number} x the horizontal position of the point
+		 * @param {Number} y the vertical position of the point
+		 * @return {Boolean} whether left <= x <= right and top <= y <= bottom
+		 */
+		isInside: function(x, y) {
+			return isBetween(this.left, x, this.right) && isBetween(this.top, y, this.bottom);
 		}
 	};
 }
@@ -153,21 +186,30 @@ function createRandomNumberGenerator(seed) {
 		},
 		/**
 		 * Returns a randomly generated integer value between the given bounds.
-		 * @param lowerBound lower bound, inclusive
-		 * @param upperBound upper bound, exclusive
+		 * @param {Number} lowerBound lower bound, inclusive
+		 * @param {Number} upperBound upper bound, exclusive
 		 * @return {Number} integer value
 		 */
 		nextInt: function (lowerBound, upperBound) {
 			this.next();
 			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
 		},
+		/**
+		 * Returns a randomly selected element of a given array.
+		 * @param {Array} array of elements
+		 * @return {Object} element of the array which has been selected, or null if the array is empty
+		 */
 		nextArrayElement: function (array) {
 			return (array.length >= 1 ? array[this.nextInt(0, array.length)] : null);
 		},
+		/**
+		 * Returns a randomly selected value of a given object.
+		 * @param {Object} object whose key/value pairs will be taken as a list for selection
+		 * @return {Object} selected value, or null if the object is empty
+		 */
 		nextObjectEntry: function (object) {
-			var keys = Object.keys(object);
-			var index = keys[nextInt(0, keys.length)];
-			return [index, keys[index]];
+			var key = this.nextArrayElement(Object.keys(object));
+			return key == null ? [null, null] : [key, object[key]];
 		}
 	};
 	result.seed = (seed == null) ? Math.random() : seed;

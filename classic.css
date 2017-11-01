@@ -1,5 +1,5 @@
 body {
-	font: 1rem 'Segoe UI','DejaVu Sans',Calibri,Helvetica;
+	font: 1rem 'Segoe UI','DejaVu Sans',Calibri,Helvetica,sans-serif;
 	margin: 0px;
 	position: absolute;
 	left: 0px;
@@ -77,7 +77,7 @@ body {
 #board {
 	display: none;
 	position: absolute;
-	border: #7f7f7f 1px solid;
+	/*border: #7f7f7f 1px solid;*/
 }
 
 .field {

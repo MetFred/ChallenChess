@@ -6,42 +6,57 @@
 const FIGURE_MARGIN = 10;
 
 /**
- * Enumeration of chess pieces.
+ * Constants for chess pieces. And a list of them.
  */
-const FIGURE_ENUM = { "PAWN": "pawn", "ROOK": "rook", "KNIGHT": "knight", "BISHOP": "bishop", "QUEEN": "queen", "KING": "king" };
+const PAWN   = "pawn";
+const ROOK   = "rook";
+const KNIGHT = "knight";
+const BISHOP = "bishop";
+const QUEEN  = "queen";
+const KING   = "king";
+const FIGURE_LIST = [PAWN, ROOK, KNIGHT, BISHOP, QUEEN, KING];
 
 /**
- * Enumeration of chess colours.
+ * Constants for chess colours.
  */
-const COLOUR_ENUM = { WHITE: "white", BLACK: "black" };
+const WHITE = "white";
+const BLACK = "black";
 
 /**
  * Enumeration of possible movements per chess piece.
  */
-const MOVEMENT_ENUM = { "pawn":   [{deltaX: 0, deltaY: 1}],
-	                    "rook":   [{deltaX: 0, deltaY: "n"}, {deltaX: "n", deltaY: 0}],
-	                    "knight": [{deltaX: 1, deltaY: 2}, {deltaX: 1, deltaY: -2}, {deltaX: 2, deltaY: 1}, {deltaX: 2, deltaY: -1}, {deltaX: -1, deltaY: 2}, {deltaX: -1, deltaY: -2}, {deltaX: -2, deltaY: 1}, {deltaX: -2, deltaY: -1}],
-	                    "bishop": [{deltaX: "n", deltaY: "n"}, {deltaX: "n", deltaY: "-n"}],
-	                    "queen":  [{deltaX: 0, deltaY: "n"}, {deltaX: "n", deltaY: 0}, {deltaX: "n", deltaY: "n"}, {deltaX: "n", deltaY: "-n"}],
-	                    "king":   [{deltaX: 0, deltaY: 1}, {deltaX: 0, deltaY: -1}, {deltaX: 1, deltaY: 1}, {deltaX: 1, deltaY: 0}, {deltaX: 1, deltaY: -1}, {deltaX: -1, deltaY: 1}, {deltaX: -1, deltaY: 0}, {deltaX: -1, deltaY: -1}] };
+const MOVEMENT_ENUM = {};
+MOVEMENT_ENUM[PAWN]   = [{deltaX: 0, deltaY: 1}];
+MOVEMENT_ENUM[ROOK]   = [{deltaX: 0, deltaY: "n"}, {deltaX: "n", deltaY: 0}];
+MOVEMENT_ENUM[KNIGHT] = [{deltaX: 1, deltaY: 2}, {deltaX: 1, deltaY: -2}, {deltaX: 2, deltaY: 1}, {deltaX: 2, deltaY: -1}, {deltaX: -1, deltaY: 2}, {deltaX: -1, deltaY: -2}, {deltaX: -2, deltaY: 1}, {deltaX: -2, deltaY: -1}];
+MOVEMENT_ENUM[BISHOP] = [{deltaX: "n", deltaY: "n"}, {deltaX: "n", deltaY: "-n"}];
+MOVEMENT_ENUM[QUEEN]  = [{deltaX: 0, deltaY: "n"}, {deltaX: "n", deltaY: 0}, {deltaX: "n", deltaY: "n"}, {deltaX: "n", deltaY: "-n"}];
+MOVEMENT_ENUM[KING]   = [{deltaX: 0, deltaY: 1}, {deltaX: 0, deltaY: -1}, {deltaX: 1, deltaY: 1}, {deltaX: 1, deltaY: 0}, {deltaX: 1, deltaY: -1}, {deltaX: -1, deltaY: 1}, {deltaX: -1, deltaY: 0}, {deltaX: -1, deltaY: -1}];
 
 /**
  * Enumeration of possible movements for capturing an opponent's piece.
  * Only defines those movements which differ from MOVEMENT_ENUM.
  */
-const CAPTURE_ENUM = { "pawn": [{deltaX: -1, deltaY: 1}, {deltaX: 1, deltaY: 1}] };
+const CAPTURE_ENUM = {};
+CAPTURE_ENUM[PAWN] = [{deltaX: -1, deltaY: 1}, {deltaX: 1, deltaY: 1}];
 
+/**
+ * Enumeration of possible movements for capturing an opponent's piece.
+ * Contains the capture moves for all types of figures - as opposed to CAPTURE_ENUM.
+ */
 const CAPTURE_MOVEMENT_ENUM = mergeDicts(CAPTURE_ENUM, MOVEMENT_ENUM);
 
 /**
  * Colour-based enumeration of directions.
  */
-const MOVEMENT_DIRECTION_ENUM = { "white": -1, "black": 1 };
+const MOVEMENT_DIRECTION_ENUM = {};
+MOVEMENT_DIRECTION_ENUM[WHITE] = -1;
+MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 
 /**
  * Global random number generator instance.
  */
-var rand = null;
+var randomGenerator = null;
 
 /**
  * The figure which the player can control.
@@ -78,9 +93,9 @@ function isPositionInField(x, y) {
  * applying a specific style.
  */
 function initDocument() {
-	q = getQueryParametersDict();
-	if (q.hasOwnProperty("style")) {
-		appendCssFileToHead(q["style"]+".css");
+	var queryDict = getQueryParametersDict();
+	if (queryDict.hasOwnProperty("style")) {
+		appendCssFileToHead(queryDict["style"]+".css");
 	} else {
 		appendCssFileToHead("classic.css");
 	}
@@ -116,7 +131,7 @@ const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yF
  */
 function initNewGame(options={}) {
 	var opts = mergeDicts(options, DEFAULT_OPTIONS);
-	rand = createRandomNumberGenerator(options.seed);
+	randomGenerator = createRandomNumberGenerator(options.seed);
 	initChessboard(opts);
 	generateRandomLevel(opts);
 	repositionAllFigures();
@@ -139,6 +154,10 @@ function fieldClicked(field) {
 	}
 }
 
+/**
+ * Moves the current figure to another field on the chess board. The movement will use a smooth transition.
+ * @param {Object} field target field
+ */
 function moveCurrentFigureTo(field) {
 	fieldMatrix[currentFigure.y][currentFigure.x].figure = null;
 	currentFigure.x = field.x;
@@ -147,6 +166,12 @@ function moveCurrentFigureTo(field) {
 	repositionFigure(currentFigure, true);
 }
 
+/**
+ * Callback function to tell that the last move (started from fieldClicked) has ended.
+ * The current figure will be thrown away and the captured figure will become the new
+ * current figure.
+ * @param {Object} figureOnTargetField the figure which stood there before
+ */
 function moveEnded(figureOnTargetField) {
 	if (currentFigure != null) {
 		if (figureOnTargetField != null) {
@@ -158,6 +183,11 @@ function moveEnded(figureOnTargetField) {
 	}
 }
 
+/**
+ * Removes the given figure. The reference from the fieldMatrix as well as the
+ * corresponding DOM element will also be removed.
+ * @param {Object} figure the figure which should be removed
+ */
 function removeFigure(figure) {
 	if (figure != null) {
 		fieldMatrix[figure.y][figure.x].figure = null;
@@ -172,23 +202,45 @@ function removeFigure(figure) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function initChessboard(options) {
-	var xFields = rand.nextInt(options.xFieldsMin, options.xFieldsMax + 1);
+	var xFields = randomGenerator.nextInt(options.xFieldsMin, options.xFieldsMax + 1);
+	var yFields = randomGenerator.nextInt(options.yFieldsMin, options.yFieldsMax + 1);
+	var fieldsMax;
+	var visibleRect = createRectangle(0, 0, xFields, yFields);
+	if (xFields >= yFields) {
+		fieldsMax = xFields;
+		visibleRect.setTop(Math.floor(0.5 * (fieldsMax - yFields)));
+	} else {
+		fieldsMax = yFields;
+		visibleRect.setLeft(Math.floor(0.5 * (fieldsMax - xFields)));
+	}
 	repositionChessboard();
-	board = document.getElementById("board");
-	board.innerHTML = "";  // alten Inhalt löschen
-	addCssClassToHead(".board"+xFields, "display:grid;grid-template-rows:repeat("+xFields+",1fr);grid-template-columns:repeat("+xFields+",1fr);");
-	board.classList.add("board"+xFields);
+	var board = document.getElementById("board");
+	board.innerHTML = "";  // delete old content
+	var className = "board"+fieldsMax;
+	addCssClassToHead("."+className, "display:grid;grid-template-rows:repeat("+fieldsMax+",1fr);grid-template-columns:repeat("+fieldsMax+",1fr);");
+	board.classList.add(className);
 	fieldMatrix = [];
-	var blackWhiteOffset = xFields % 2;  // Feld unten links muss schwarz werden
-	for (var y = 0; y < xFields; ++y) {
-		fieldMatrix.push([]);
-		for (var x = 0; x < xFields; ++x) {
-			board.appendChild(createField(x, y, blackWhiteOffset).domElement);
+	var blackWhiteOffset = xFields % 2;  // lower left field must be black
+	for (var y = 0; y < fieldsMax; ++y) {
+		if (isBetween(visibleRect.top, y, visibleRect.bottom)) {
+			fieldMatrix.push([]);
+			for (var x = 0; x < fieldsMax; ++x) {
+				var visible = isBetween(visibleRect.left, x, visibleRect.right);
+				board.appendChild(createField(x-visibleRect.left, y-visibleRect.top, blackWhiteOffset, visible).domElement);
+			}
 		}
 	}
 }
 
-function createField(x, y, blackWhiteOffset) {
+/**
+ * Creates a field for the chess board at the given x and y coordinates.
+ * @param {Number} x horizontal position
+ * @param {Number} y vertical position
+ * @param {Number} blackWhiteOffset an offset needed to make the lower left field always black
+ * @param {Boolean} visible whether this is a visible field or a dummy field
+ * @return {Object} newly created field
+ */
+function createField(x, y, blackWhiteOffset, visible) {
 	var result = {x: x,
 		          y: y,
 		          domElement: document.createElement("div"),
@@ -198,10 +250,17 @@ function createField(x, y, blackWhiteOffset) {
 	};
 	result.domElement.id = "field_"+x+"_"+y;
 	result.domElement.classList.add("field");
-	result.domElement.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
+	if (visible) {
+		result.domElement.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
+	} else {
+		result.domElement.classList.add("hidden");
+	}
 	result.domElement.onclick = result.onClick;
+	result.visible = visible;
 	result.moveable = false;
-	fieldMatrix[y].push(result);
+	if (visible) {
+		fieldMatrix[y].push(result);
+	}
 	return result;
 }
 
@@ -211,15 +270,15 @@ function createField(x, y, blackWhiteOffset) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function generateRandomLevel(options) {
-	var currentField = rand.nextArrayElement(rand.nextArrayElement(fieldMatrix));
-	var currentColour = COLOUR_ENUM.BLACK;
-	var stepCount = rand.nextInt(options.stepCountMin, options.stepCountMax);
+	var currentField = randomGenerator.nextArrayElement(randomGenerator.nextArrayElement(fieldMatrix));
+	var currentColour = BLACK;
+	var stepCount = randomGenerator.nextInt(options.stepCountMin, options.stepCountMax);
 	figureList = [];
 	currentField.domElement.classList.add("target_field");
-	createFigure({x: currentField.x, y: currentField.y, type: FIGURE_ENUM.KING, colour: currentColour});
+	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
 	for (var i=0;i<stepCount;++i) {
 		var possibleMoves = [];
-		Object.values(FIGURE_ENUM).forEach(function (figureType) {
+		FIGURE_LIST.forEach(function (figureType) {
 			getPossibleMoves(currentField, figureType, currentColour, CAPTURE_MOVEMENT_ENUM, false).forEach(function (possibleMove) {
 				possibleMoves.push(possibleMove);
 			});
@@ -232,19 +291,19 @@ function generateRandomLevel(options) {
 			possibleMoves.forEach(function (move, i) {
 				if (move.figureType != figureType) {
 					iTo = i;
-					reducedMoves.push(possibleMoves[rand.nextInt(iFrom, iTo)]);
+					reducedMoves.push(possibleMoves[randomGenerator.nextInt(iFrom, iTo)]);
 					iFrom = i;
 					figureType = move.figureType;
 				}
 			});
-			reducedMoves.push(possibleMoves[rand.nextInt(iFrom, possibleMoves.length)]);
+			reducedMoves.push(possibleMoves[randomGenerator.nextInt(iFrom, possibleMoves.length)]);
 		}
 		if (reducedMoves.length == 0) {
 			break;
 		}
-		var move = rand.nextArrayElement(reducedMoves);
+		var move = randomGenerator.nextArrayElement(reducedMoves);
 		currentField = fieldMatrix[move.y][move.x];
-		currentColour = (currentColour == COLOUR_ENUM.BLACK ? COLOUR_ENUM.WHITE : COLOUR_ENUM.BLACK);
+		currentColour = (currentColour == BLACK ? WHITE : BLACK);
 		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
@@ -274,8 +333,15 @@ function createFigure(options) {
 	return result;
 }
 
+/**
+ * Saves the moving target fields whose class list can later be updated rather than
+ * updating all field's class lists.
+ */
 var oldMoves = null;
 
+/**
+ * Removes the possible_move CSS class from the fields of oldMoves and sets the moveable flag to false.
+ */
 function clearPossibleMoves() {
 	if (oldMoves != null) {
 		oldMoves.forEach(function (move) {
@@ -299,6 +365,16 @@ function updatePossibleMoves() {
 	oldMoves = moves;
 }
 
+/**
+ * Returns a list of fields which are possible moving targets from the given field.
+ * A possible target field must be reachable, and must not be occupied by another figure.
+ * @param {Number} x horizontal position of the source field
+ * @param {Number} y vertical position of the source field
+ * @param {Number} dx horizontal delta of a move
+ * @param {Number} dy vertical delta of a move
+ * @param {String} figureType type of the figure (use the constants PAWN, ROOK, BISHOP etc.)
+ * @return {Array} array of possible moving targets.
+ */
 function getPossibleMoveFields(x, y, dx, dy, figureType, figureColour) {
 	var result = [];
 	var mx = x + dx;
@@ -311,6 +387,16 @@ function getPossibleMoveFields(x, y, dx, dy, figureType, figureColour) {
 	return result;
 }
 
+/**
+ * Returns a list of fields which are possible capturing targets from the given field.
+ * A possible target field must be reachable, and must be occupied by a figure of the other colour.
+ * @param {Number} x horizontal position of the source field
+ * @param {Number} y vertical position of the source field
+ * @param {Number} dx horizontal delta of capturing move
+ * @param {Number} dy vertical delta of capturing move
+ * @param {String} figureType type of the figure (use the constants PAWN, ROOK, BISHOP etc.)
+ * @return {Array} array of possible capturing targets.
+ */
 function getPossibleCaptureFields(x, y, dx, dy, figureType, figureColour) {
 	var result = [];
 	var mx = x + dx;
@@ -329,6 +415,15 @@ function getPossibleCaptureFields(x, y, dx, dy, figureType, figureColour) {
 	return result;
 }
 
+/**
+ * Returns a list of possible moves for a specified figure.
+ * @param {Object} field source field
+ * @param {String} figureType type of the figure (use the constants PAWN, ROOK, BISHOP etc.)
+ * @param {String} figureColour colour of the figure (use the constants WHITE or BLACK)
+ * @param {Object} movementDefinitions dictionary of movement definitions, per figureType
+ * @param {Boolean} capturing if true, CAPTURE_MOVEMENT_ENUM will be used, MOVEMENT_ENUM otherwise
+ * @return {Array} array of possible moves
+ */
 function getPossibleMoves(field, figureType, figureColour, movementDefinitions, capturing) {
 	result = [];
 	var moveFunction = capturing ? getPossibleCaptureFields : getPossibleMoveFields;
@@ -406,6 +501,12 @@ function repositionAllFigures() {
 	});
 }
 
+/**
+ * Repositions the figure on the chess board. This can be done after
+ * moving the figure, or after resizing the document window.
+ * @param {Object} figure the figure to be repositioned
+ * @param {Boolean} smooth whether the movement should have a transition
+ */
 function repositionFigure(figure, smooth=false) {
 	if ("domElement" in figure && figure.domElement != null) {
 		if (smooth) {
