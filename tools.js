@@ -215,7 +215,20 @@ function createRandomNumberGenerator(seed) {
 			return key == null ? [null, null] : [key, object[key]];
 		}
 	};
-	result.seed = (seed == null) ? Math.random() : seed;
+	var numericalSeed;
+	if (seed == null || typeof seed === "undefined" || seed == "") {
+		numericalSeed = Math.random();
+	} else {
+		numericalSeed = 1;
+		var s = "" + seed;
+		for (var i = 0; i < s.length; ++i) {
+			numericalSeed = (numericalSeed * s.charCodeAt(i)) >> 4;
+			if (numericalSeed > 1000000000) {
+				numericalSeed >>= 4;
+			}
+		}
+	}
+	result.seed = numericalSeed;
 	result.number = result.seed * SQRT2 - Math.floor(result.seed * SQRT2);
 	return result;
 }
