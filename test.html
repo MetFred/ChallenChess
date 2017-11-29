@@ -1,0 +1,390 @@
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+		<title>ChallenTest</title>
+		<script src="tools.js"></script>
+		<script src="challenchess.js"></script>
+		<script>
+function repositionChessboard() {
+	var boardArea = getElementBounds(document.getElementById("board_area"));
+	var bLeft, bTop, bWidth, bHeight;
+	if (boardArea.width > boardArea.height) {
+		bWidth = bHeight = boardArea.height;
+		bLeft = boardArea.left + Math.floor(0.5*(boardArea.width-bWidth));
+		bTop = boardArea.top;
+	} else {
+		bWidth = bHeight = boardArea.width;
+		bLeft = boardArea.left;
+		bTop = boardArea.top + Math.floor(0.5*(boardArea.height-bHeight));
+	}
+	board = document.getElementById("board");
+	board.style.position = "absolute";
+	board.style.left = bLeft+"px";
+	board.style.top = bTop+"px";
+	board.style.width = (bWidth-2)+"px";  // Randbreite abziehen
+	board.style.height = (bHeight-2)+"px";  // Randbreite abziehen
+	board.style.display = "grid";
+}
+function repositionFigures() {
+	repositionFigure(currentFigure);
+}
+function initGame(xFields) {
+	initChessboard(xFields);
+	placeFirstFigure();
+	showPotentialMovingTargets();
+}
+function getFieldPosition(fieldId) {
+	parts = fieldId.split("_");
+	if (parts[0] == "field") {
+		return {x: parseInt(parts[1]), y: parseInt(parts[2])};
+	} else {
+		return null;
+	}
+}
+function fieldClicked(e) {
+	console.log("fieldClicked mit e.target.id = "+e.target.id);
+	fieldPos = getFieldPosition(e.target.id);
+	if (e.target.classList.contains(PMT)) {
+		if (fieldPos != null) {
+			//alert("Field clicked: ("+fieldPos.x+"; "+fieldPos.y+")");
+			moveFigureTo(currentFigure, fieldPos.x, fieldPos.y);
+		}
+	}
+}
+var chessBoardLineFieldsCount = null;
+function initChessboard(xFields) {
+	repositionChessboard();
+	board = document.getElementById("board");
+	board.innerHTML = "";  // alten Inhalt löschen
+	board.classList.add("board"+xFields);
+	var blackWhiteOffset = xFields % 2;  // Feld unten links muss schwarz werden
+	for (var y = 0; y < xFields; ++y) {
+		for (var x = 0; x < xFields; ++x) {
+			var field = document.createElement("div");
+			field.id = "field_"+x+"_"+y;
+			field.classList.add("field");
+			field.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
+			if (3 <= x && x <= 4 && 3 <= y && y <= 4) {
+				field.classList.add("hidden");
+			}
+			field.onclick = fieldClicked;
+			field.innerHTML = x+";"+y;  //field.id;
+			board.appendChild(field);
+		}
+	}
+	chessBoardLineFieldsCount = xFields;
+}
+window.onresize = function(event) {
+	repositionChessboard();
+	repositionFigures();
+};
+function openMenu() {
+	var mmcl = document.getElementById("main_menu").classList;
+	mmcl.remove("moved_out");
+	mmcl.add("moved_in");
+	var plcl = document.getElementById("pause_layer").classList;
+	plcl.remove("not_faded");
+	plcl.add("faded");
+}
+function closeMenu() {
+	var mmcl = document.getElementById("main_menu").classList;
+	mmcl.remove("moved_in");
+	mmcl.add("moved_out");
+	var plcl = document.getElementById("pause_layer").classList;
+	plcl.remove("faded");
+	plcl.add("not_faded");
+}
+function getFieldByIndex(x, y) {
+	return document.getElementById("field_"+x+"_"+y);
+}
+function getVisibleFieldByIndex(x, y) {
+	var f = getFieldByIndex(x, y);
+	if (f == null || f.classList.contains("hidden")) {
+		return null;
+	} else {
+		return f;
+	}
+}
+function setFigureImagePath(figure) {
+	if (figure.img != null) {
+		figure.img.src = "img/" + figure.type + "_" + figure.color + "_test.svg";
+	}
+}
+const figureEnum = { PAWN: "pawn", ROOK: "rook", KNIGHT: "knight", BISHOP: "bishop", QUEEN: "queen", KING: "king" };
+const colorEnum = { WHITE: "white", BLACK: "black" };
+function initFigure(options) {
+	var figure = {}
+	figure.type = ("type" in options) ? options.type : figureEnum.PAWN;
+	figure.color = ("color" in options) ? options.color: colorEnum.WHITE;
+	figure.field = {x: 0, y: chessBoardLineFieldsCount-1};
+	figure.img = ("id" in options) ? document.getElementById(options.id) : null;
+	setFigureImagePath(figure);
+	return figure;
+}
+function repositionFigure(figure) {
+	if ("img" in figure && figure.img != null) {
+		var bounds = getElementBounds(getFieldByIndex(figure.field.x, figure.field.y));
+		figure.img.style.left = (bounds.left+FIGURE_MARGIN) + "px";
+		figure.img.style.top = (bounds.top+FIGURE_MARGIN) + "px";
+		figure.img.style.width = (bounds.width - 2*FIGURE_MARGIN) + "px";
+		figure.img.style.height = (bounds.height - 2*FIGURE_MARGIN) + "px";
+	}
+}
+const FIGURE_MARGIN = 10;
+function placeFigure(figure, x, y) {
+	figure.field.x = (x >= 0) ? x : chessBoardLineFieldsCount + x;
+	figure.field.y = (y >= 0) ? y : chessBoardLineFieldsCount + y;
+	repositionFigure(figure);
+}
+function moveFigureTo(figure, x, y) {
+	placeFigure(figure, x, y);
+	showPotentialMovingTargets();
+}
+var currentFigure = {};
+function placeFirstFigure() {
+	currentFigure = initFigure({type: figureEnum.KNIGHT, color: colorEnum.WHITE, id: "current_figure"});
+	placeFigure(currentFigure, 2, -1);
+}
+const PMT = "potential-moving-target";
+function addClass(element, c) {
+	if (element) {
+		element.classList.add(c);
+	}
+	return element;
+}
+function showPotentialMovingTargets() {
+	var fields = document.querySelectorAll(".field");
+	for (var i = 0; i < fields.length; ++i) {
+		fields[i].classList.remove(PMT);
+	}
+	if (currentFigure.type == figureEnum.PAWN) {
+		addClass(getVisibleFieldByIndex(currentFigure.field.x, currentFigure.field.y - 1), PMT);
+	} else if (currentFigure.type == figureEnum.KNIGHT) {
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 1, currentFigure.field.y - 2), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 2, currentFigure.field.y - 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 1, currentFigure.field.y - 2), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 2, currentFigure.field.y - 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 1, currentFigure.field.y + 2), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 2, currentFigure.field.y + 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 1, currentFigure.field.y + 2), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 2, currentFigure.field.y + 1), PMT);
+	} else if (currentFigure.type == figureEnum.KING) {
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 1, currentFigure.field.y - 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x,     currentFigure.field.y - 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 1, currentFigure.field.y - 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 1, currentFigure.field.y),     PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 1, currentFigure.field.y),     PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x - 1, currentFigure.field.y + 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x,     currentFigure.field.y + 1), PMT);
+		addClass(getVisibleFieldByIndex(currentFigure.field.x + 1, currentFigure.field.y + 1), PMT);
+	}
+	if (currentFigure.type == figureEnum.ROOK || currentFigure.type == figureEnum.QUEEN) {
+		for (var x = currentFigure.field.x - 1; x >= 0; --x) {
+			if (addClass(getVisibleFieldByIndex(x, currentFigure.field.y), PMT) == null) {
+				break;
+			}
+		}
+		for (var x = currentFigure.field.x + 1; x < chessBoardLineFieldsCount; ++x) {
+			if (addClass(getVisibleFieldByIndex(x, currentFigure.field.y), PMT) == null) {
+				break;
+			}
+		}
+		for (var y = currentFigure.field.y - 1; y >= 0; --y) {
+			if (addClass(getVisibleFieldByIndex(currentFigure.field.x, y), PMT) == null) {
+				break;
+			}
+		}
+		for (var y = currentFigure.field.y + 1; y < chessBoardLineFieldsCount; ++y) {
+			if (addClass(getVisibleFieldByIndex(currentFigure.field.x, y), PMT) == null) {
+				break;
+			}
+		}
+	}
+	if (currentFigure.type == figureEnum.BISHOP || currentFigure.type == figureEnum.QUEEN) {
+		for (var x = currentFigure.field.x - 1, y = currentFigure.field.y - 1; x >= 0 && y >= 0; --x, --y) {
+			if (addClass(getVisibleFieldByIndex(x, y), PMT) == null) {
+				break;
+			}
+		}
+		for (var x = currentFigure.field.x - 1, y = currentFigure.field.y + 1; x >= 0 && y < chessBoardLineFieldsCount; --x, ++y) {
+			if (addClass(getVisibleFieldByIndex(x, y), PMT) == null) {
+				break;
+			}
+		}
+		for (var x = currentFigure.field.x + 1, y = currentFigure.field.y - 1; x < chessBoardLineFieldsCount && y >= 0; ++x, --y) {
+			if (addClass(getVisibleFieldByIndex(x, y), PMT) == null) {
+				break;
+			}
+		}
+		for (var x = currentFigure.field.x + 1, y = currentFigure.field.y + 1; x < chessBoardLineFieldsCount && y < chessBoardLineFieldsCount; ++x, ++y) {
+			if (addClass(getVisibleFieldByIndex(x, y), PMT) == null) {
+				break;
+			}
+		}
+	}
+}
+function selectFigure(type) {
+	currentFigure.type = type;
+	setFigureImagePath(currentFigure);
+	showPotentialMovingTargets();
+}
+function selectColor(color) {
+	currentFigure.color = color;
+	setFigureImagePath(currentFigure);
+	showPotentialMovingTargets();
+}
+		</script>
+		<style type="text/css">
+body {
+	font: 12pt 'Segoe UI','DejaVu Sans',Calibri,Helvetica;
+	margin: 0;
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	bottom: 0px;
+	display: grid;
+	grid-template-rows: 1.5em 1fr 1.5em;
+	grid-template-columns: 1fr;
+}
+.dash {
+	border: black 1px dashed;
+}
+.cell {
+	grid-column: auto / auto;
+	grid-row: auto / auto;
+}
+#menu_area {
+	text-align: center;
+	cursor: pointer;
+}
+#board {
+	display: none;
+	position: absolute;
+	border: #7f7f7f 1px solid;
+}
+.board7 {
+	display: grid;
+	grid-template-rows: repeat(7, 1fr);
+	grid-template-columns: repeat(7, 1fr);
+}
+.board8 {
+	display: grid;
+	grid-template-rows: repeat(8, 1fr);
+	grid-template-columns: repeat(8, 1fr);
+}
+.field {
+	grid-column: auto / auto;
+	grid-row: auto / auto;
+	padding: 1%;
+	box-shadow: 10px 7px 10px grey;
+	z-index: 1;
+}
+.hidden {
+	visibility: hidden;
+}
+.black {
+	color: white;
+	background-color: black;
+	outline: 1px solid white;
+	outline-offset: -2px;
+}
+.white {
+	color: black;
+	background-color: white;
+	outline: 1px solid black;
+	outline-offset: -2px;
+}
+.potential-moving-target.white {
+	background-color: #00ff00;
+}
+.potential-moving-target.black {
+	background-color: #007f00;
+}
+.potential-moving-target:hover {
+	border: #aaf 5px solid;
+	outline: none;
+}
+
+#main_menu {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	height: 420px;
+	overflow: hidden;
+	border: white 3px solid;
+	font-weight: bold;
+	font-size: 24pt;
+	color: white;
+	padding: 50px;
+	text-align: center;
+	z-index: 42;
+}
+div.moved_out {
+	top: -526px;
+	transition: top 0.5s ease-in-out;
+}
+div.moved_in {
+	top: 0px;
+	transition: top 0.5s ease-in-out;
+}
+
+#pause_layer {
+	position: absolute;
+	left: 0px;
+	right: 0px;
+	top: 0px;
+	background-color: black;
+	z-index: 41;
+	cursor: crosshair;
+}
+div.not_faded {
+	height: 0%;
+	opacity: 0;
+	transition: height 0s 0.5s, opacity 0.5s linear;
+}
+div.faded {
+	height: 100%;
+	opacity: 0.7;
+	transition: opacity 0.5s linear;
+}
+
+#status_line {
+	text-align: center;
+}
+
+.figur {
+	position: absolute;
+	left: 20px;
+	top: 20px;
+	z-index: 23;
+	transition: left 0.5s ease-in-out, top 0.5s ease-in-out;
+}
+		</style>
+	</head>
+	<body onload="initDocument();initGame(8);">
+		<div id="main_menu" class="moved_out"
+			<p>MAIN MENU <span onclick="closeMenu();" style="cursor:pointer">[X]</span></p>
+			<p>
+				<img src="img/pawn_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.PAWN);" />&nbsp;
+				<img src="img/rook_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.ROOK);" />&nbsp;
+				<img src="img/knight_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.KNIGHT);" />&nbsp;
+				<img src="img/bishop_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.BISHOP);" />&nbsp;
+				<img src="img/queen_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.QUEEN);" />&nbsp;
+				<img src="img/king_white_test.svg" style="width:50px;height:50px;cursor:pointer" onclick="selectFigure(figureEnum.KING);" />
+			</p>
+			<p>
+				<span style="color:black;background-color:white;border:black 1px solid;cursor:pointer" onclick="selectColor(colorEnum.WHITE);">WHITE</span>&nbsp;
+				<span style="color:white;background-color:black;border:white 1px solid;cursor:pointer" onclick="selectColor(colorEnum.BLACK);">BLACK</span>
+			</p>
+		</div>
+		<div id="pause_layer" class="not_faded" onclick="closeMenu();"></div>
+		<div id="menu_area" class="dash cell" onclick="openMenu();">· · ·</div>
+		<div id="board_area" class="dash cell">
+			board area
+			<div id="board">board</div>
+		</div>
+		<div id="status_line" class="dash cell">status line</div>
+		<img id="current_figure" class="figur" src="" />
+	</body>
+</html>
