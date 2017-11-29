@@ -1,6 +1,6 @@
 
 /**
- * Squareroot of 2 as constant to use for many calculations.
+ * Square root of 2 as a constant to use for many calculations.
  */
 const SQRT2 = Math.sqrt(2);
 
@@ -60,20 +60,23 @@ function addCssClassToHead(className, classStyleDefinition) {
 		style.innerHTML = className + "{" + classStyleDefinition + "}";
 		document.getElementsByTagName('head')[0].appendChild(style);
 		additionalCssClassNames.push(className);
+	} else {
+		console.warn("Cannot add another CSS class \""+className+"\" to <head>, because this name has already been used.");
 	}
 }
 
 /**
  * Returns the "absolute" position (relative to the body) of the given element.
- * @param element as determined e.g. via document.getElementById()
- * @return {Array} left and top coordinates as an array's elements
+ * @param DOM element as determined e.g. via document.getElementById()
+ * @return {Object} object with left and top properties representing the element's position
  */
 function getElementPosition(element) {
-	var [left, top] = [0, 0];
+	var result = {left: 0, top: 0};
 	for (el = element; el; el = el.offsetParent) {
-		[left, top] = [left + el.offsetLeft, top + el.offsetTop];
+		result.left += el.offsetLeft;
+		result.top  += el.offsetTop;
 	}
-	return [left, top];
+	return result;
 }
 
 /**
@@ -157,12 +160,12 @@ function createRectangle(left=0, top=0, width=0, height=0) {
 
 /**
  * Returns the "absolute" bounds (relative to the body) of the given element.
- * @param element as determined e.g. via document.getElementById()
+ * @param DOM element as determined e.g. via document.getElementById()
  * @return {Object} bounds as the object's left, top, width, height, right, and bottom properties
  */
 function getElementBounds(element) {
-	var [left, top] = getElementPosition(element);
-	return createRectangle(left, top, element.offsetWidth, element.offsetHeight);
+	var pos = getElementPosition(element);
+	return createRectangle(pos.left, pos.top, element.offsetWidth, element.offsetHeight);
 }
 
 /**

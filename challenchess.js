@@ -54,6 +54,13 @@ MOVEMENT_DIRECTION_ENUM[WHITE] = -1;
 MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 
 /**
+ * Name of the style which should be used. A corresponding CSS file
+ * must exist (with the extension gameStyle+".css") and the images
+ * must exist in the folder "img/"+gameStyle.
+ */
+var gameStyle = "funny";
+
+/**
  * Global random number generator instance.
  */
 var randomGenerator = null;
@@ -95,11 +102,10 @@ function isPositionInField(x, y) {
 function initDocument() {
 	var queryDict = getQueryParametersDict();
 	if (queryDict.hasOwnProperty("style")) {
-		appendCssFileToHead(queryDict["style"]+".css");
-	} else {
-		appendCssFileToHead("classic.css");
+		gameStyle = queryDict["style"]
 	}
-	window.setTimeout(initNewGame, 42);
+	appendCssFileToHead(gameStyle+".css");
+	window.setTimeout(initNewGame, 42, queryDict);
 }
 
 /**
@@ -179,7 +185,7 @@ function moveEnded(figureOnTargetField) {
 			currentFigure = figureOnTargetField;
 		}
 		currentFigure.domElement.classList.remove("walking");
-		currentFigure.domElement.classList.add("swinging");
+		currentFigure.domElement.classList.add("idle");
 	}
 }
 
@@ -202,8 +208,8 @@ function removeFigure(figure) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function initChessboard(options) {
-	var xFields = randomGenerator.nextInt(options.xFieldsMin, options.xFieldsMax + 1);
-	var yFields = randomGenerator.nextInt(options.yFieldsMin, options.yFieldsMax + 1);
+	var xFields = randomGenerator.nextInt(parseInt(options.xFieldsMin), parseInt(options.xFieldsMax) + 1);
+	var yFields = randomGenerator.nextInt(parseInt(options.yFieldsMin), parseInt(options.yFieldsMax) + 1);
 	var fieldsMax;
 	var visibleRect = createRectangle(0, 0, xFields, yFields);
 	if (xFields >= yFields) {
@@ -272,7 +278,7 @@ function createField(x, y, blackWhiteOffset, visible) {
 function generateRandomLevel(options) {
 	var currentField = randomGenerator.nextArrayElement(randomGenerator.nextArrayElement(fieldMatrix));
 	var currentColour = BLACK;
-	var stepCount = randomGenerator.nextInt(options.stepCountMin, options.stepCountMax);
+	var stepCount = randomGenerator.nextInt(parseInt(options.stepCountMin), parseInt(options.stepCountMax));
 	figureList = [];
 	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
@@ -309,7 +315,7 @@ function generateRandomLevel(options) {
 	currentField.domElement.classList.add("start_field");
 	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
 	currentFigure.domElement.classList.add("current_figure");
-	currentFigure.domElement.classList.add("swinging");
+	currentFigure.domElement.classList.add("idle");
 }
 
 /**
@@ -326,7 +332,7 @@ function createFigure(options) {
 	var figure = document.createElement("img");
 	result.domElement = figure;
 	figure.classList.add("figure");
-	figure.src = "img/" + result.type + "_" + result.colour + "_test.svg";
+	figure.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
 	boardArea.appendChild(figure);
 	figureList.push(result);
 	fieldMatrix[options.y][options.x].figure = result;
@@ -511,7 +517,7 @@ function repositionFigure(figure, smooth=false) {
 	if ("domElement" in figure && figure.domElement != null) {
 		if (smooth) {
 			figure.domElement.classList.add("smooth_movement");
-			figure.domElement.classList.remove("swinging");
+			figure.domElement.classList.remove("idle");
 			figure.domElement.classList.add("walking");
 		} else {
 			figure.domElement.classList.remove("smooth_movement");
