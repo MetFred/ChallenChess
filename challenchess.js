@@ -539,3 +539,16 @@ function documentResized(event) {
 	repositionChessboard();
 	repositionAllFigures();
 }
+
+// TODO
+function isGameRunning() {
+	return true;
+}
+
+// TODO
+function getCurrentGameState() {
+	return {solved: false,
+		    time: 0,
+		    moves: 0,
+		    capturedFigures: []};
+}
