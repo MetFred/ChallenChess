@@ -148,7 +148,7 @@ const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yF
 /**
  * Updates the time in the status line at the bottom of the document.
  */
-function updateTimeInStatusLine(gameState=null) {
+function updateTimeInStatusLine(gameState = null) {
 	var element = document.getElementById("status_time");
 	var gs = gameState;
 	if (gs == null) {
@@ -157,7 +157,7 @@ function updateTimeInStatusLine(gameState=null) {
 	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gs.time)+'</span>';
 }
 
-function updateMovesInStatusLine(gameState) {
+function updateMovesInStatusLine(gameState = null) {
 	var element = document.getElementById("status_moves");
 	var gs = gameState;
 	if (gs == null) {
@@ -166,7 +166,7 @@ function updateMovesInStatusLine(gameState) {
 	element.innerHTML = 'moves: <span class="value">'+gs.moves+'</span>';
 }
 
-function updateCapturesInStatusLine(gameState) {
+function updateCapturesInStatusLine(gameState = null) {
 	var element = document.getElementById("status_captures");
 	var gs = gameState;
 	if (gs == null) {
