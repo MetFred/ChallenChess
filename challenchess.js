@@ -66,6 +66,16 @@ var gameStyle = "funny";
 var gameTimer = null;
 
 /**
+ * Number of moves the player has already done in the current game.
+ */
+var numberOfMoves = 0;
+
+/**
+ * List of figures the player has already captured in the current game.
+ */
+var capturedFigures = [];
+
+/**
  * Global random number generator instance.
  */
 var randomGenerator = null;
@@ -194,6 +204,8 @@ function initNewGame(options={}) {
 	}
 	gameTimer.reset();
 	gameTimer.start();
+	numberOfMoves = 0;
+	capturedFigures = [];
 	updateStatusLine();
 }
 
@@ -233,12 +245,15 @@ function moveCurrentFigureTo(field) {
  */
 function moveEnded(figureOnTargetField) {
 	if (currentFigure != null) {
+		++numberOfMoves;
 		if (figureOnTargetField != null) {
+			capturedFigures.push(figureOnTargetField);
 			removeFigure(currentFigure);
 			currentFigure = figureOnTargetField;
 		}
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
+		updateStatusLine();
 	}
 }
 
@@ -602,6 +617,6 @@ function isGameRunning() {
 function getCurrentGameState() {
 	return {solved: false,
 		    time: gameTimer.time,
-		    moves: 0,
-		    capturedFigures: []};
+		    moves: numberOfMoves,
+		    capturedFigures: capturedFigures};
 }
