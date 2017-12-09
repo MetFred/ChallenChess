@@ -176,3 +176,28 @@ body {
 		transform: scaleX(1.05) scaleY(0.95);
 	}
 }
+
+#status_line {
+	padding-left: 1rem;
+	padding-right: 1rem;
+}
+
+#status_time {
+	display: inline;
+	margin-right:5rem;
+}
+
+#status_moves {
+	display: inline;
+	margin-left: 5rem;
+	margin-right: 5rem;
+}
+
+#status_captures {
+	display: inline;
+	margin-left: 5rem;
+}
+
+#status_line .value {
+	font-weight: bold;
+}

@@ -61,6 +61,21 @@ MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 var gameStyle = "funny";
 
 /**
+ * Global game timer instance.
+ */
+var gameTimer = null;
+
+/**
+ * Number of moves the player has already done in the current game.
+ */
+var numberOfMoves = 0;
+
+/**
+ * List of figures the player has already captured in the current game.
+ */
+var capturedFigures = [];
+
+/**
  * Global random number generator instance.
  */
 var randomGenerator = null;
@@ -131,6 +146,47 @@ function closeMainMenu() {
 const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yFieldsMax": 12, "stepCountMin": 12, "stepCountMax": 16, "seed": null}
 
 /**
+ * Updates the time in the status line at the bottom of the document.
+ */
+function updateTimeInStatusLine(gameState = null) {
+	var element = document.getElementById("status_time");
+	var gs = gameState;
+	if (gs == null) {
+		gs = getCurrentGameState();
+	}
+	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gs.time)+'</span>';
+}
+
+function updateMovesInStatusLine(gameState = null) {
+	var element = document.getElementById("status_moves");
+	var gs = gameState;
+	if (gs == null) {
+		gs = getCurrentGameState();
+	}
+	element.innerHTML = 'moves: <span class="value">'+gs.moves+'</span>';
+}
+
+function updateCapturesInStatusLine(gameState = null) {
+	var element = document.getElementById("status_captures");
+	var gs = gameState;
+	if (gs == null) {
+		gs = getCurrentGameState();
+	}
+	element.innerHTML = 'captures: <span class="value">'+gs.capturedFigures.length+'</span>';
+}
+
+/**
+ * Updates the values in the status line (time, moves, captured figures)
+ * at the bottom of the document.
+ */
+function updateStatusLine() {
+	var gameState = getCurrentGameState();
+	updateTimeInStatusLine(gameState);
+	updateMovesInStatusLine(gameState);
+	updateCapturesInStatusLine(gameState);
+}
+
+/**
  * Initialises a new game using the given options.
  * @param {Object} options if a specific option is not present here,
  *                         it will be taken from DEFAULT_OPTIONS
@@ -142,6 +198,15 @@ function initNewGame(options={}) {
 	generateRandomLevel(opts);
 	repositionAllFigures();
 	updatePossibleMoves();
+	if (gameTimer == null) {
+		gameTimer = createGameTimer();
+		gameTimer.onChanged = updateTimeInStatusLine;
+	}
+	gameTimer.reset();
+	gameTimer.start();
+	numberOfMoves = 0;
+	capturedFigures = [];
+	updateStatusLine();
 }
 
 /**
@@ -180,12 +245,15 @@ function moveCurrentFigureTo(field) {
  */
 function moveEnded(figureOnTargetField) {
 	if (currentFigure != null) {
+		++numberOfMoves;
 		if (figureOnTargetField != null) {
+			capturedFigures.push(figureOnTargetField);
 			removeFigure(currentFigure);
 			currentFigure = figureOnTargetField;
 		}
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
+		updateStatusLine();
 	}
 }
 
@@ -548,7 +616,7 @@ function isGameRunning() {
 // TODO
 function getCurrentGameState() {
 	return {solved: false,
-		    time: 0,
-		    moves: 0,
-		    capturedFigures: []};
+		    time: gameTimer.time,
+		    moves: numberOfMoves,
+		    capturedFigures: capturedFigures};
 }
