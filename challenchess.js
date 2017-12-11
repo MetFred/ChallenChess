@@ -276,34 +276,24 @@ function removeFigure(figure) {
  *                         it will be taken from DEFAULT_OPTIONS
  */
 function initChessboard(options) {
-	var xFields = randomGenerator.nextInt(parseInt(options.xFieldsMin), parseInt(options.xFieldsMax) + 1);
-	var yFields = randomGenerator.nextInt(parseInt(options.yFieldsMin), parseInt(options.yFieldsMax) + 1);
-	var fieldsMax;
-	var visibleRect = createRectangle(0, 0, xFields, yFields);
-	if (xFields >= yFields) {
-		fieldsMax = xFields;
-		visibleRect.setTop(Math.floor(0.5 * (fieldsMax - yFields)));
-	} else {
-		fieldsMax = yFields;
-		visibleRect.setLeft(Math.floor(0.5 * (fieldsMax - xFields)));
-	}
-	repositionChessboard();
 	var board = document.getElementById("board");
 	board.innerHTML = "";  // delete old content
-	var className = "board"+fieldsMax;
-	addCssClassToHead("."+className, "display:grid;grid-template-rows:repeat("+fieldsMax+",1fr);grid-template-columns:repeat("+fieldsMax+",1fr);");
+	var xFields = randomGenerator.nextInt(parseInt(options.xFieldsMin), parseInt(options.xFieldsMax) + 1);
+	var yFields = randomGenerator.nextInt(parseInt(options.yFieldsMin), parseInt(options.yFieldsMax) + 1);
+	var className = "board"+xFields+"x"+yFields;
+	addCssClassToHead("."+className, "display:grid;grid-template-rows:repeat("+yFields+",1fr);grid-template-columns:repeat("+xFields+",1fr);");
 	board.classList.add(className);
 	fieldMatrix = [];
-	var blackWhiteOffset = xFields % 2;  // lower left field must be black
-	for (var y = 0; y < fieldsMax; ++y) {
-		if (isBetween(visibleRect.top, y, visibleRect.bottom)) {
-			fieldMatrix.push([]);
-			for (var x = 0; x < fieldsMax; ++x) {
-				var visible = isBetween(visibleRect.left, x, visibleRect.right);
-				board.appendChild(createField(x-visibleRect.left, y-visibleRect.top, blackWhiteOffset, visible).domElement);
-			}
+	var blackWhiteOffset = yFields % 2;  // lower left field must be black
+	for (var y = 0; y < yFields; ++y) {
+		fieldMatrix.push([]);
+		for (var x = 0; x < xFields; ++x) {
+			var field = createField(x, y, blackWhiteOffset);
+			fieldMatrix[y].push(field);
+			board.appendChild(field.domElement);
 		}
 	}
+	repositionChessboard();
 }
 
 /**
@@ -311,10 +301,9 @@ function initChessboard(options) {
  * @param {Number} x horizontal position
  * @param {Number} y vertical position
  * @param {Number} blackWhiteOffset an offset needed to make the lower left field always black
- * @param {Boolean} visible whether this is a visible field or a dummy field
  * @return {Object} newly created field
  */
-function createField(x, y, blackWhiteOffset, visible) {
+function createField(x, y, blackWhiteOffset) {
 	var result = {x: x,
 		          y: y,
 		          domElement: document.createElement("div"),
@@ -324,17 +313,9 @@ function createField(x, y, blackWhiteOffset, visible) {
 	};
 	result.domElement.id = "field_"+x+"_"+y;
 	result.domElement.classList.add("field");
-	if (visible) {
-		result.domElement.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
-	} else {
-		result.domElement.classList.add("hidden");
-	}
+	result.domElement.classList.add(((x+y+blackWhiteOffset)%2==0) ? "white" : "black");
 	result.domElement.onclick = result.onClick;
-	result.visible = visible;
 	result.moveable = false;
-	if (visible) {
-		fieldMatrix[y].push(result);
-	}
 	return result;
 }
 
@@ -542,20 +523,29 @@ function getPossibleMoves(field, figureType, figureColour, movementDefinitions, 
  * window has been resized.
  */
 function repositionChessboard() {
-	var boardAreaRect = getElementBounds(document.getElementById("board_area"));
-	var boardRect = createRectangle();
-	var size;
-	if (boardAreaRect.width > boardAreaRect.height) {
-		size = boardAreaRect.height;
-		boardRect.setLeft(boardAreaRect.left + Math.floor(0.5*(boardAreaRect.width-size)));
-		boardRect.setTop(boardAreaRect.top);
+	var xFields, yFields;
+	if (fieldMatrix == null) {
+		xFields = 8;
+		yFields = 8;
 	} else {
-		size = boardAreaRect.width;
-		boardRect.setLeft(boardAreaRect.left);
-		boardRect.setTop(boardAreaRect.top + Math.floor(0.5*(boardAreaRect.height-size)));
+		yFields = fieldMatrix.length;
+		xFields = (yFields >= 1 ? fieldMatrix[0].length : 8);
 	}
-	boardRect.setWidth(size);
-	boardRect.setHeight(size);
+	var boardAspectRatio = xFields == 0 ? 1 : xFields/yFields;
+	var boardAreaRect = getElementBounds(document.getElementById("board_area"));
+	var boardAreaAspectRatio = boardAreaRect.height == 0 ? 1 : boardAreaRect.width/boardAreaRect.height;
+	var boardRect = createRectangle();
+	if (boardAreaAspectRatio > boardAspectRatio) {
+		boardRect.setHeight(boardAreaRect.height);
+		boardRect.setTop(boardAreaRect.top);
+		boardRect.setWidth(Math.floor(boardAreaRect.height*xFields/yFields));
+		boardRect.setLeft(boardAreaRect.left + Math.floor(0.5*(boardAreaRect.width-boardRect.width)));
+	} else {
+		boardRect.setWidth(boardAreaRect.width);
+		boardRect.setLeft(boardAreaRect.left);
+		boardRect.setHeight(Math.floor(boardAreaRect.width*yFields/xFields));
+		boardRect.setTop(boardAreaRect.top + Math.floor(0.5*(boardAreaRect.height-boardRect.height)));
+	}
 	board = document.getElementById("board");
 	board.style.position = "absolute";
 	board.style.left = boardRect.left+"px";
