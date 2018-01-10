@@ -196,6 +196,9 @@ function initNewGame(options={}) {
 	initChessboard(opts);
 	generateRandomLevel(opts);
 	repositionAllFigures();
+	numberOfMoves = 0;
+	capturedFigures = [];
+	gameRunning = true;
 	updatePossibleMoves();
 	if (gameTimer == null) {
 		gameTimer = createGameTimer();
@@ -203,9 +206,6 @@ function initNewGame(options={}) {
 	}
 	gameTimer.reset();
 	gameTimer.start();
-	gameRunning = true;
-	numberOfMoves = 0;
-	capturedFigures = [];
 	updateStatusLine();
 }
 
@@ -266,13 +266,23 @@ function moveEnded(figureOnTargetField) {
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
 		updateStatusLine();
-		targetField = fieldMatrix[currentFigure.y][currentFigure.x];
-		if (targetField.domElement.classList.contains("target_field")) {
-			if (figureList.length == 1) {
-				stopGame(true);
-			} else {
-				stopGame(false, "You did not capture all figures.")
-			}
+		destinationField = fieldMatrix[currentFigure.y][currentFigure.x];
+		checkAndHandleGameEnd(destinationField);
+	}
+}
+
+/**
+ * Checks whether the current game's end conditions are fulfilled.
+ * If so, stop the game and decide whether the game has successfully
+ * been solved, or not. Display a corresponding message.
+ * @param {Object} destinationField destination of the last move
+ */
+function checkAndHandleGameEnd(destinationField) {
+	if (destinationField.domElement.classList.contains("target_field")) {
+		if (figureList.length == 1) {
+			stopGame(true);
+		} else {
+			stopGame(false, "You did not capture all figures.")
 		}
 	}
 }
@@ -442,7 +452,7 @@ function updatePossibleMoves() {
 		fieldMatrix[move.y][move.x].moveable = true;
 	});
 	possibleMoves = moves;
-	if (!currentFigureCanMove()) {
+	if (gameRunning && !currentFigureCanMove()) {
 		stopGame(false, "The current figure can no longer move.");
 	}
 }

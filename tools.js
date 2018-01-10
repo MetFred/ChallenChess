@@ -198,6 +198,13 @@ function createRandomNumberGenerator(seed) {
 			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
 		},
 		/**
+		 * Returns a randomly generated Boolean value.
+		 * @return {Boolean} true or false, randomly selected
+		 */
+		nextBoolean: function () {
+			return this.next() < 0.5;
+		},
+		/**
 		 * Returns a randomly selected element of a given array.
 		 * @param {Array} array of elements
 		 * @return {Object} element of the array which has been selected, or null if the array is empty
