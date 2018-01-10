@@ -66,14 +66,19 @@ var gameStyle = "funny";
 var gameTimer = null;
 
 /**
+ * Flag whether the game is still running.
+ */
+var gameRunning = null;
+
+/**
  * Number of moves the player has already done in the current game.
  */
-var numberOfMoves = 0;
+var numberOfMoves = null;
 
 /**
  * List of figures the player has already captured in the current game.
  */
-var capturedFigures = [];
+var capturedFigures = null;
 
 /**
  * Global random number generator instance.
@@ -87,7 +92,8 @@ var currentFigure = null;
 
 /**
  * The list of figures which appear in the game, including
- * currentFigure.
+ * currentFigure. A figure will be removed from this list when it is
+ * captured (but will be added to capturedFigures).
  */
 var figureList = null;
 
@@ -148,31 +154,25 @@ const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yF
 /**
  * Updates the time in the status line at the bottom of the document.
  */
-function updateTimeInStatusLine(gameState = null) {
+function updateTimeInStatusLine() {
 	var element = document.getElementById("status_time");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gs.time)+'</span>';
+	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gameTimer.time)+'</span>';
 }
 
-function updateMovesInStatusLine(gameState = null) {
+/**
+ * Updates the number of performed moves in the status line at the bottom of the document.
+ */
+function updateMovesInStatusLine() {
 	var element = document.getElementById("status_moves");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'moves: <span class="value">'+gs.moves+'</span>';
+	element.innerHTML = 'moves: <span class="value">'+numberOfMoves+'</span>';
 }
 
-function updateCapturesInStatusLine(gameState = null) {
+/**
+ * Updates the number of captured figures in the status line at the bottom of the document.
+ */
+function updateCapturesInStatusLine() {
 	var element = document.getElementById("status_captures");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'captures: <span class="value">'+gs.capturedFigures.length+'</span>';
+	element.innerHTML = 'captures: <span class="value">'+capturedFigures.length+'</span>';
 }
 
 /**
@@ -180,10 +180,9 @@ function updateCapturesInStatusLine(gameState = null) {
  * at the bottom of the document.
  */
 function updateStatusLine() {
-	var gameState = getCurrentGameState();
-	updateTimeInStatusLine(gameState);
-	updateMovesInStatusLine(gameState);
-	updateCapturesInStatusLine(gameState);
+	updateTimeInStatusLine();
+	updateMovesInStatusLine();
+	updateCapturesInStatusLine();
 }
 
 /**
@@ -204,6 +203,7 @@ function initNewGame(options={}) {
 	}
 	gameTimer.reset();
 	gameTimer.start();
+	gameRunning = true;
 	numberOfMoves = 0;
 	capturedFigures = [];
 	updateStatusLine();
@@ -220,9 +220,21 @@ function fieldClicked(field) {
 		clearPossibleMoves();
 		window.setTimeout(function() {
 			moveEnded(figureOnTargetField);
-			updatePossibleMoves();
+			if (gameRunning) {
+				updatePossibleMoves();
+			} else {
+				clearPossibleMoves();
+			}
 		}, 750);
 	}
+}
+
+/**
+ * Tells whether the current figure is still able to move.
+ * @return {Boolean} flag about the figure's agility
+ */
+function currentFigureCanMove() {
+	return possibleMoves.length > 0;
 }
 
 /**
@@ -254,6 +266,14 @@ function moveEnded(figureOnTargetField) {
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
 		updateStatusLine();
+		targetField = fieldMatrix[currentFigure.y][currentFigure.x];
+		if (targetField.domElement.classList.contains("target_field")) {
+			if (figureList.length == 1) {
+				stopGame(true);
+			} else {
+				stopGame(false, "You did not capture all figures.")
+			}
+		}
 	}
 }
 
@@ -267,6 +287,10 @@ function removeFigure(figure) {
 		fieldMatrix[figure.y][figure.x].figure = null;
 		var boardArea = document.getElementById("board_area");
 		boardArea.removeChild(figure.domElement);
+		var figureIndex = figureList.indexOf(figure);
+		if (figureIndex >= 0) {
+			figureList.splice(figureIndex, 1);
+		}
 	}
 }
 
@@ -378,11 +402,11 @@ function generateRandomLevel(options) {
 function createFigure(options) {
 	var result = options;
 	var boardArea = document.getElementById("board_area");
-	var figure = document.createElement("img");
-	result.domElement = figure;
-	figure.classList.add("figure");
-	figure.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
-	boardArea.appendChild(figure);
+	var figureImageElement = document.createElement("img");
+	result.domElement = figureImageElement;
+	figureImageElement.classList.add("figure");
+	figureImageElement.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
+	boardArea.appendChild(figureImageElement);
 	figureList.push(result);
 	fieldMatrix[options.y][options.x].figure = result;
 	return result;
@@ -392,14 +416,14 @@ function createFigure(options) {
  * Saves the moving target fields whose class list can later be updated rather than
  * updating all field's class lists.
  */
-var oldMoves = null;
+var possibleMoves = null;
 
 /**
- * Removes the possible_move CSS class from the fields of oldMoves and sets the moveable flag to false.
+ * Removes the possible_move CSS class from the fields of possibleMoves and sets the moveable flag to false.
  */
 function clearPossibleMoves() {
-	if (oldMoves != null) {
-		oldMoves.forEach(function (move) {
+	if (possibleMoves != null) {
+		possibleMoves.forEach(function (move) {
 			fieldMatrix[move.y][move.x].domElement.classList.remove("possible_move");
 			fieldMatrix[move.y][move.x].moveable = false;
 		});
@@ -412,12 +436,15 @@ function clearPossibleMoves() {
  */
 function updatePossibleMoves() {
 	clearPossibleMoves();
-	moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
+	var moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
 	moves.forEach(function (move) {
 		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
 		fieldMatrix[move.y][move.x].moveable = true;
 	});
-	oldMoves = moves;
+	possibleMoves = moves;
+	if (!currentFigureCanMove()) {
+		stopGame(false, "The current figure can no longer move.");
+	}
 }
 
 /**
@@ -598,15 +625,26 @@ function documentResized(event) {
 	repositionAllFigures();
 }
 
-// TODO
+/**
+ * Tells whether the game is still running with respect to fulfilled
+ * end conditions.
+ */
 function isGameRunning() {
-	return true;
+	return gameRunning;
 }
 
-// TODO
-function getCurrentGameState() {
-	return {solved: false,
-		    time: gameTimer.time,
-		    moves: numberOfMoves,
-		    capturedFigures: capturedFigures};
+/**
+ * Stops the game.
+ * @param {Boolean} has the game successfully been solved?
+ * @param {String} message text telling why the player has lost the game
+ */
+function stopGame(solved, messageText) {
+	gameTimer.pause();
+	gameRunning = false;
+	updateStatusLine();
+	if (solved) {
+		alert("You solved the game.");
+	} else {
+		alert("Sorry, you failed.\n" + messageText);
+	}
 }
