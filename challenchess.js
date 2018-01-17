@@ -61,6 +61,11 @@ MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 var gameStyle = "funny";
 
 /**
+ * Dictionary of game options.
+ */
+var gameOptions = null;
+
+/**
  * Global game timer instance.
  */
 var gameTimer = null;
@@ -126,7 +131,8 @@ function initDocument() {
 		gameStyle = queryDict["style"]
 	}
 	appendCssFileToHead(gameStyle+".css");
-	window.setTimeout(initNewGame, 42, queryDict);
+	gameOptions = mergeDicts(queryDict, DEFAULT_OPTIONS);
+	window.setTimeout(initNewGame, 42);
 }
 
 /**
@@ -186,19 +192,16 @@ function updateStatusLine() {
 }
 
 /**
- * Initialises a new game using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Initialises a new game using the current gameOptions.
  */
-function initNewGame(options={}) {
-	var opts = mergeDicts(options, DEFAULT_OPTIONS);
-	randomGenerator = createRandomNumberGenerator(options.seed);
-	initChessboard(opts);
-	generateRandomLevel(opts);
+function initNewGame() {
+	gameRunning = true;
+	randomGenerator = createRandomNumberGenerator(gameOptions.seed);
+	initChessboard();
+	generateRandomLevel();
 	repositionAllFigures();
 	numberOfMoves = 0;
 	capturedFigures = [];
-	gameRunning = true;
 	updatePossibleMoves();
 	if (gameTimer == null) {
 		gameTimer = createGameTimer();
@@ -295,7 +298,7 @@ function checkAndHandleGameEnd(destinationField) {
 function removeFigure(figure) {
 	if (figure != null) {
 		fieldMatrix[figure.y][figure.x].figure = null;
-		var boardArea = document.getElementById("board_area");
+		var boardArea = document.getElementById("figures");
 		boardArea.removeChild(figure.domElement);
 		var figureIndex = figureList.indexOf(figure);
 		if (figureIndex >= 0) {
@@ -305,19 +308,27 @@ function removeFigure(figure) {
 }
 
 /**
- * Initialises a chess board using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Clears the current chessboard, if there is any from a previous game.
  */
-function initChessboard(options) {
+function clearChessboard() {
+	fieldMatrix = [];
 	var board = document.getElementById("board");
 	board.innerHTML = "";  // delete old content
-	var xFields = randomGenerator.nextInt(parseInt(options.xFieldsMin), parseInt(options.xFieldsMax) + 1);
-	var yFields = randomGenerator.nextInt(parseInt(options.yFieldsMin), parseInt(options.yFieldsMax) + 1);
+	board.className = "";  // clear classList
+	possibleMoves = null;
+}
+
+/**
+ * Initialises a chess board using the current gameOptions.
+ */
+function initChessboard() {
+	clearChessboard();
+	var board = document.getElementById("board");
+	var xFields = randomGenerator.nextInt(parseInt(gameOptions.xFieldsMin), parseInt(gameOptions.xFieldsMax) + 1);
+	var yFields = randomGenerator.nextInt(parseInt(gameOptions.yFieldsMin), parseInt(gameOptions.yFieldsMax) + 1);
 	var className = "board"+xFields+"x"+yFields;
 	addCssClassToHead("."+className, "display:grid;grid-template-rows:repeat("+yFields+",1fr);grid-template-columns:repeat("+xFields+",1fr);");
 	board.classList.add(className);
-	fieldMatrix = [];
 	var blackWhiteOffset = yFields % 2;  // lower left field must be black
 	for (var y = 0; y < yFields; ++y) {
 		fieldMatrix.push([]);
@@ -354,15 +365,24 @@ function createField(x, y, blackWhiteOffset) {
 }
 
 /**
- * Generates a random level using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Clears old figures if there are some from a previous game.
  */
-function generateRandomLevel(options) {
+function clearFigures() {
+	figureList = null;
+	currentFigure = null;
+	capturedFigures = null;
+	document.getElementById("figures").innerHTML = "";  // delete old figures
+}
+
+/**
+ * Generates a random level using the current gameOptions.
+ */
+function generateRandomLevel() {
+	clearFigures();
+	figureList = [];
 	var currentField = randomGenerator.nextArrayElement(randomGenerator.nextArrayElement(fieldMatrix));
 	var currentColour = BLACK;
-	var stepCount = randomGenerator.nextInt(parseInt(options.stepCountMin), parseInt(options.stepCountMax));
-	figureList = [];
+	var stepCount = randomGenerator.nextInt(parseInt(gameOptions.stepCountMin), parseInt(gameOptions.stepCountMax));
 	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
 	for (var i=0;i<stepCount;++i) {
@@ -411,12 +431,12 @@ function generateRandomLevel(options) {
  */
 function createFigure(options) {
 	var result = options;
-	var boardArea = document.getElementById("board_area");
+	var figuresDomElement = document.getElementById("figures");
 	var figureImageElement = document.createElement("img");
 	result.domElement = figureImageElement;
 	figureImageElement.classList.add("figure");
 	figureImageElement.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
-	boardArea.appendChild(figureImageElement);
+	figuresDomElement.appendChild(figureImageElement);
 	figureList.push(result);
 	fieldMatrix[options.y][options.x].figure = result;
 	return result;
@@ -597,9 +617,11 @@ function repositionChessboard() {
  * on the chess board.
  */
 function repositionAllFigures() {
-	figureList.forEach(function(figure) {
-		repositionFigure(figure);
-	});
+	if (figureList != null) {
+		figureList.forEach(function(figure) {
+			repositionFigure(figure);
+		});
+	}
 }
 
 /**
@@ -653,8 +675,58 @@ function stopGame(solved, messageText) {
 	gameRunning = false;
 	updateStatusLine();
 	if (solved) {
-		alert("You solved the game.");
+		document.getElementById("game_end_message").innerHTML = "You solved the game.";
 	} else {
-		alert("Sorry, you failed.\n" + messageText);
+		document.getElementById("game_end_message").innerHTML = "Sorry, you failed.<br />" + messageText;
 	}
+	openGameEndDialogue();
+}
+
+/**
+ * Opens (shows) the game end dialogue.
+ */
+function openGameEndDialogue() {
+	document.getElementById("game_end_dialogue").classList.add("visible");
+	document.getElementById("pause_layer").classList.add("faded");
+}
+
+/**
+ * Closes (hides) the game end dialogue.
+ */
+function closeGameEndDialogue() {
+	document.getElementById("game_end_dialogue").classList.remove("visible");
+	document.getElementById("pause_layer").classList.remove("faded");
+}
+
+/**
+ * Inits the game using the same seed for the random number generator.
+ */
+function onButtonRetryClicked() {
+	closeGameEndDialogue();
+	gameOptions.seed = randomGenerator.seed;  // take the same seed in order to recreate the same level
+	initNewGame();
+}
+
+/**
+ * Inits a new game using the same options as before.
+ */
+function onButtonNewGameClicked() {
+	closeGameEndDialogue();
+	gameOptions.seed = null;  // will take a new, random seed, and thus probably creates a different level
+	initNewGame();
+}
+
+/**
+ * Closes the dialogue and opens the main menu instead.
+ */
+function onButtonMenuClicked() {
+	closeGameEndDialogue();
+	openMainMenu();
+}
+
+/**
+ * Closes the dialogue.
+ */
+function onButtonBackToGameClicked() {
+	closeGameEndDialogue();
 }

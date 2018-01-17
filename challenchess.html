@@ -7,14 +7,26 @@
 		<script src="challenchess.js"></script>
 	</head>
 	<body onload="initDocument();" onresize="documentResized(event);">
+		<!-- Main Menu -->
 		<div id="main_menu" class="moved_out"
 			<p>MAIN MENU <span class="clickable" onclick="closeMainMenu();">[X]</span></p>
 		</div>
-		<div id="pause_layer" onclick="closeMainMenu();"></div>
+		<div id="pause_layer" onclick="closeMainMenu();closeGameEndDialogue();"></div>
 		<div id="main_menu_anchor" class="clickable dash cell" onclick="openMainMenu();">· · ·</div>
+		<!-- Game End Dialogue -->
+		<div id="game_end_dialogue">
+			<div id="game_end_message">...</div>
+			<button onclick="onButtonRetryClicked();">Retry</button>
+			<button onclick="onButtonNewGameClicked();">New Game</button>
+			<button onclick="onButtonMenuClicked();">Menu</button>
+			<button onclick="onButtonBackToGameClicked();">Back to Game</button>
+		</div>
+		<!-- Board -->
 		<div id="board_area" class="dash cell">
 			<div id="board"></div>
+			<div id="figures"></div>
 		</div>
+		<!-- Status Line -->
 		<div id="status_line" class="dash cell">
 			<div id="status_time"></div>
 			<div id="status_moves"></div>

@@ -49,6 +49,27 @@ body {
 	text-align: center;
 }
 
+#game_end_dialogue {
+	position: absolute;
+	left: 25%;
+	right: 25%;
+	top: 25%;
+	bottom: 25%;
+	display: none;
+	z-index: 42;
+	border: white 3px solid;
+	background-color: rgba(0,0,0, 0.5);
+	font-weight: bold;
+	font-size: 2rem;
+	color: white;
+	padding: 50px;
+	text-align: center;
+}
+
+#game_end_dialogue.visible {
+	display: block;
+}
+
 .clickable {
 	cursor: pointer;
 }

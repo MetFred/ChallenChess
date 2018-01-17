@@ -183,7 +183,8 @@ function createRandomNumberGenerator(seed) {
 		 * @return {Number} integer value
 		 */
 		next: function () {
-			this.number += this.number * this.seed * SQRT2;
+			this.number += this.number * SQRT2;
+			this.number *= 1000;
 			this.number -= Math.floor(this.number);
 			return this.number;
 		},
@@ -194,8 +195,7 @@ function createRandomNumberGenerator(seed) {
 		 * @return {Number} integer value
 		 */
 		nextInt: function (lowerBound, upperBound) {
-			this.next();
-			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
+			return lowerBound + Math.floor(this.next() * (upperBound - lowerBound));
 		},
 		/**
 		 * Returns a randomly generated Boolean value.
@@ -225,6 +225,8 @@ function createRandomNumberGenerator(seed) {
 	var numericalSeed;
 	if (seed == null || typeof seed === "undefined" || seed == "") {
 		numericalSeed = Math.random();
+	} else if (typeof seed === "number") {
+		numericalSeed = seed;
 	} else {
 		numericalSeed = 1;
 		var s = "" + seed;
@@ -236,7 +238,7 @@ function createRandomNumberGenerator(seed) {
 		}
 	}
 	result.seed = numericalSeed;
-	result.number = result.seed * SQRT2 - Math.floor(result.seed * SQRT2);
+	result.number = numericalSeed;
 	return result;
 }
 
