@@ -254,6 +254,20 @@ function isBetween(lowerBound, value, upperBound) {
 }
 
 /**
+ * Creates a new array or object containing the values of the given one.
+ * @param x source data structure
+ * @return cloned x
+ */
+function clone(x) {
+	var result = Array.isArray(x) ? [] : {};
+	for (k in x) {
+		var v = x[k];
+		result[k] = (typeof v === "object") ? clone(v) : v;
+	}
+	return result;
+}
+
+/**
  * Merges two dictionaries by creating a new one and copying all values
  * from both to the result.
  * @param {Object} values dictionary which values will be favoured

@@ -8,18 +8,47 @@
 	</head>
 	<body onload="initDocument();" onresize="documentResized(event);">
 		<!-- Main Menu -->
-		<div id="main_menu" class="moved_out"
-			<p>MAIN MENU <span class="clickable" onclick="closeMainMenu();">[X]</span></p>
+		<div id="main_menu" class="moved_out">
+			<div class="main_menu_title">MAIN MENU</div>
+			<div class="options_line">
+				<div class="option_field">
+					<div class="option_label">X</div>
+					<div class="small button decrease" onclick="onButtonXFieldsMinMinusClicked();">-</div><div class="option_value" id="optionXFieldsMin">?</div><div class="small button increase" onclick="onButtonXFieldsMinPlusClicked();">+</div>
+					...
+					<div class="small button decrease" onclick="onButtonXFieldsMaxMinusClicked();">-</div><div class="option_value" id="optionXFieldsMax">?</div><div class="small button increase" onclick="onButtonXFieldsMaxPlusClicked();">+</div>
+				</div>
+				<div class="option_field">
+					<div class="option_label">Y</div>
+					<div class="small button decrease" onclick="onButtonYFieldsMinMinusClicked();">-</div><div class="option_value" id="optionYFieldsMin">?</div><div class="small button increase" onclick="onButtonYFieldsMinPlusClicked();">+</div>
+					...
+					<div class="small button decrease" onclick="onButtonYFieldsMaxMinusClicked();">-</div><div class="option_value" id="optionYFieldsMax">?</div><div class="small button increase" onclick="onButtonYFieldsMaxPlusClicked();">+</div>
+				</div>
+				<div class="option_field">
+					Mode
+				</div>
+				<div class="option_field">
+					<div class="option_label">Steps</div>
+					<div class="small button decrease" onclick="onButtonStepCountMinMinusClicked();">-</div><div class="option_value" id="optionStepCountMin">?</div><div class="small button increase" onclick="onButtonStepCountMinPlusClicked();">+</div>
+					...
+					<div class="small button decrease" onclick="onButtonStepCountMaxMinusClicked();">-</div><div class="option_value" id="optionStepCountMax">?</div><div class="small button increase" onclick="onButtonStepCountMaxPlusClicked();">+</div>
+				</div>
+			</div>
+			<div class="main_menu_buttons">
+				<div class="button" onclick="onButtonApplyOptionsClicked();" title="start a new game using these options">New Game</div>
+				<div class="button" onclick="onButtonCancelOptionsClicked();" title="discard any changes and return to the game">Back to Game</div>
+			</div>
 		</div>
 		<div id="pause_layer" onclick="closeMainMenu();closeGameEndDialogue();"></div>
 		<div id="main_menu_anchor" class="clickable dash cell" onclick="openMainMenu();">· · ·</div>
 		<!-- Game End Dialogue -->
 		<div id="game_end_dialogue">
 			<div id="game_end_message">...</div>
-			<button onclick="onButtonRetryClicked();">Retry</button>
-			<button onclick="onButtonNewGameClicked();">New Game</button>
-			<button onclick="onButtonMenuClicked();">Menu</button>
-			<button onclick="onButtonBackToGameClicked();">Back to Game</button>
+			<div>
+				<div class="button" onclick="onButtonRetryClicked();" title="restart this game">Retry</div>
+				<div class="button" onclick="onButtonNewGameClicked();" title="start a new game using the same options">New Game</div>
+				<div class="button" onclick="onButtonMenuClicked();" title="go to the main menu">Menu</div>
+				<div class="button" onclick="onButtonBackToGameClicked();" title="close this dialogue and have another look at the game">Back to Game</div>
+			</div>
 		</div>
 		<!-- Board -->
 		<div id="board_area" class="dash cell">
