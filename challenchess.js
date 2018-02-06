@@ -298,8 +298,12 @@ function moveEnded(figureOnTargetField) {
 		++numberOfMoves;
 		if (figureOnTargetField != null) {
 			capturedFigures.push(figureOnTargetField);
-			removeFigure(currentFigure);
-			currentFigure = figureOnTargetField;
+			if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+				removeFigure(currentFigure);
+				currentFigure = figureOnTargetField;
+			} else {
+				removeFigure(figureOnTargetField);
+			}
 		}
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
@@ -420,9 +424,15 @@ function generateRandomLevel() {
 	var stepCount = randomGenerator.nextInt(parseInt(gameOptions.stepCountMin), parseInt(gameOptions.stepCountMax));
 	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
+	var usedFigureList = []
+	if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+		usedFigureList = FIGURE_LIST;
+	} else {
+		usedFigureList = [randomGenerator.nextArrayElement(FIGURE_LIST)];
+	}
 	for (var i=0;i<stepCount;++i) {
 		var possibleMoves = [];
-		FIGURE_LIST.forEach(function (figureType) {
+		usedFigureList.forEach(function (figureType) {
 			getPossibleMoves(currentField, figureType, currentColour, CAPTURE_MOVEMENT_ENUM, false).forEach(function (possibleMove) {
 				possibleMoves.push(possibleMove);
 			});
@@ -447,11 +457,18 @@ function generateRandomLevel() {
 		}
 		var move = randomGenerator.nextArrayElement(reducedMoves);
 		currentField = fieldMatrix[move.y][move.x];
-		currentColour = (currentColour == BLACK ? WHITE : BLACK);
+		if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+			currentColour = (currentColour == BLACK ? WHITE : BLACK);
+		}
 		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
-	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
+	if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+		currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
+	} else {
+		removeFigure(fieldMatrix[currentField.y][currentField.x].figure);
+		currentFigure = createFigure({x: currentField.x, y: currentField.y, type: usedFigureList[0], colour: WHITE});
+	}
 	currentFigure.domElement.classList.add("current_figure");
 	currentFigure.domElement.classList.add("idle");
 }
