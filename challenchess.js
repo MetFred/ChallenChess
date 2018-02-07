@@ -54,24 +54,78 @@ MOVEMENT_DIRECTION_ENUM[WHITE] = -1;
 MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 
 /**
- * List of game modes.
- */
-const GAME_MODE_MOVE = "game_mode_move";
-const GAME_MODE_CAPTURE = "game_mode_capture";
-const GAME_MODE_CAPTURE_AND_REPLACE = "game_mode_capture_and_replace";
-const GAME_MODES = [GAME_MODE_MOVE, GAME_MODE_CAPTURE, GAME_MODE_CAPTURE_AND_REPLACE];
-
-/**
  * Default values for all game related options.
  */
-const DEFAULT_OPTIONS = {"xFieldsMin":   6,
-                         "xFieldsMax":   12,
-                         "yFieldsMin":   6,
-                         "yFieldsMax":   12,
-                         "mode":         GAME_MODE_CAPTURE_AND_REPLACE,
-                         "stepCountMin": 12,
-                         "stepCountMax": 16,
-                         "seed":         null};
+const DEFAULT_OPTIONS = {"xFieldsMin":          6,
+                         "xFieldsMax":          12,
+                         "yFieldsMin":          6,
+                         "yFieldsMax":          12,
+                         "replaceAfterCapture": false,
+                         "captureAll":          false,
+                         "stepCountMin":        12,
+                         "stepCountMax":        16,
+                         "seed":                null};
+
+/**
+ * Definition of a spin-button-adjustable value range in the main menu.
+ */
+var spinValuesAndLimits = {};
+
+/**
+ * Adds a new spin-button-adjustable value range definition for the main menu.
+ * @String name name of the value range
+ * @Number minLimit minimum value which can be chosen
+ * @Number maxLimit maximum value which can be chosen
+ */
+function addSpinValueDefinition(name, minLimit, maxLimit) {
+	spinValuesAndLimits[name] = {"minValue":     minLimit,
+		                         "maxValue":     maxLimit,
+		                         "minLimit":     minLimit,
+		                         "maxLimit":     maxLimit,
+		                         "minOptionKey": name+"Min",
+		                         "maxOptionKey": name+"Max",
+		                         "minElementId": name + "MinOption",
+		                         "maxElementId": name + "MaxOption",
+		                         "refresh": function() {
+									clonedGameOptionsForMainMenu[this.minOptionKey] = this.minValue;
+									clonedGameOptionsForMainMenu[this.maxOptionKey] = this.maxValue;
+									document.getElementById(this.minElementId).innerHTML = this.minValue;
+									document.getElementById(this.maxElementId).innerHTML = this.maxValue;
+								 },
+		                         "decreaseMin": function() {
+									if (this.minValue > this.minLimit) {
+										this.minValue--;
+										this.refresh();
+									}
+								 },
+								 "increaseMin": function() {
+									if (this.minValue < this.maxLimit) {
+										this.minValue++;
+										if (this.minValue > this.maxValue) {
+											this.maxValue = this.minValue;
+										}
+										this.refresh();
+									}
+								 },
+								 "decreaseMax": function() {
+									if (this.maxValue > this.minLimit) {
+										this.maxValue--;
+										if (this.maxValue < this.minValue) {
+											this.minValue = this.maxValue;
+										}
+										this.refresh();
+									}
+							     },
+							     "increaseMax": function() {
+									if (this.maxValue < this.maxLimit) {
+										this.maxValue++;
+										this.refresh();
+									}
+								 }};
+}
+addSpinValueDefinition("xFields", 4, 16);
+addSpinValueDefinition("yFields", 4, 16);
+addSpinValueDefinition("stepCount", 3, 20);
 
 /**
  * Name of the style which should be used. A corresponding CSS file
@@ -152,6 +206,12 @@ function initDocument() {
 	}
 	appendCssFileToHead(gameStyle+".css");
 	gameOptions = mergeDicts(queryDict, DEFAULT_OPTIONS);
+	if (typeof gameOptions.replaceAfterCapture === "string") {
+		gameOptions.replaceAfterCapture = gameOptions.replaceAfterCapture == "true";
+	}
+	if (typeof gameOptions.captureAll === "string") {
+		gameOptions.captureAll = gameOptions.captureAll == "true";
+	}
 	window.setTimeout(initNewGame, 42);
 }
 
@@ -165,12 +225,9 @@ var clonedGameOptionsForMainMenu = null;
  * Updates the displayed value of all options in the main menu.
  */
 function showAllOptions() {
-	showOptionXFieldsMin();
-	showOptionXFieldsMax();
-	showOptionYFieldsMin();
-	showOptionYFieldsMax();
-	showOptionStepCountMin();
-	showOptionStepCountMax();
+	Object.values(spinValuesAndLimits).forEach(function(spinValue) {
+		spinValue.refresh();
+	});
 }
 
 /**
@@ -179,6 +236,12 @@ function showAllOptions() {
  */
 function openMainMenu() {
 	clonedGameOptionsForMainMenu = clone(gameOptions);
+	spinValuesAndLimits.xFields.minValue = clonedGameOptionsForMainMenu.xFieldsMin;
+	spinValuesAndLimits.xFields.maxValue = clonedGameOptionsForMainMenu.xFieldsMax;
+	spinValuesAndLimits.yFields.minValue = clonedGameOptionsForMainMenu.yFieldsMin;
+	spinValuesAndLimits.yFields.maxValue = clonedGameOptionsForMainMenu.yFieldsMax;
+	spinValuesAndLimits.stepCount.minValue = clonedGameOptionsForMainMenu.stepCountMin;
+	spinValuesAndLimits.stepCount.maxValue = clonedGameOptionsForMainMenu.stepCountMax;
 	showAllOptions();
 	document.getElementById("main_menu").classList.remove("moved_out");
 	document.getElementById("pause_layer").classList.add("faded");
@@ -298,7 +361,7 @@ function moveEnded(figureOnTargetField) {
 		++numberOfMoves;
 		if (figureOnTargetField != null) {
 			capturedFigures.push(figureOnTargetField);
-			if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+			if (gameOptions.replaceAfterCapture) {
 				removeFigure(currentFigure);
 				currentFigure = figureOnTargetField;
 			} else {
@@ -321,7 +384,7 @@ function moveEnded(figureOnTargetField) {
  */
 function checkAndHandleGameEnd(destinationField) {
 	if (destinationField.domElement.classList.contains("target_field")) {
-		if (figureList.length == 1) {
+		if (figureList.length == 1 || !gameOptions.captureAll) {
 			stopGame(true);
 		} else {
 			stopGame(false, "You did not capture all figures.")
@@ -425,7 +488,7 @@ function generateRandomLevel() {
 	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
 	var usedFigureList = []
-	if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+	if (gameOptions.replaceAfterCapture) {
 		usedFigureList = FIGURE_LIST;
 	} else {
 		usedFigureList = [randomGenerator.nextArrayElement(FIGURE_LIST)];
@@ -457,13 +520,13 @@ function generateRandomLevel() {
 		}
 		var move = randomGenerator.nextArrayElement(reducedMoves);
 		currentField = fieldMatrix[move.y][move.x];
-		if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+		if (gameOptions.replaceAfterCapture) {
 			currentColour = (currentColour == BLACK ? WHITE : BLACK);
 		}
 		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
-	if (gameOptions.mode == GAME_MODE_CAPTURE_AND_REPLACE) {
+	if (gameOptions.replaceAfterCapture) {
 		currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
 	} else {
 		removeFigure(fieldMatrix[currentField.y][currentField.x].figure);
@@ -805,178 +868,4 @@ function onButtonCancelOptionsClicked() {
 function applyNewOptions() {
 	gameOptions = clonedGameOptionsForMainMenu;
 	gameOptions.seed = null;
-}
-
-/**
- * Updates the display of the minimum x fields option.
- */
-function showOptionXFieldsMin() {
-	document.getElementById("optionXFieldsMin").innerHTML = clonedGameOptionsForMainMenu.xFieldsMin;
-}
-/**
- * Decreases the minimum x fields option by 1. A value smaller than 4 is not allowed.
- */
-function onButtonXFieldsMinMinusClicked() {
-	if (clonedGameOptionsForMainMenu.xFieldsMin > 4) {
-		clonedGameOptionsForMainMenu.xFieldsMin--;
-		showOptionXFieldsMin();
-	}
-}
-/**
- * Increases the minimum x fields option by 1. A value larger than 16 is not allowed.
- * If the value will exceed the maximum x fields option, that value will also be increased.
- */
-function onButtonXFieldsMinPlusClicked() {
-	if (clonedGameOptionsForMainMenu.xFieldsMin < 16) {
-		clonedGameOptionsForMainMenu.xFieldsMin++;
-		showOptionXFieldsMin();
-		if (clonedGameOptionsForMainMenu.xFieldsMax < clonedGameOptionsForMainMenu.xFieldsMin) {
-			onButtonXFieldsMaxPlusClicked();
-		}
-	}
-}
-
-/**
- * Updates the display of the maximum x fields option.
- */
-function showOptionXFieldsMax() {
-	document.getElementById("optionXFieldsMax").innerHTML = clonedGameOptionsForMainMenu.xFieldsMax;
-}
-/**
- * Decreases the maximum x fields option by 1. A value smaller than 4 is not allowed.
- * If the value will be smaller than the minimum x fields option, that value will also be decreased.
- */
-function onButtonXFieldsMaxMinusClicked() {
-	if (clonedGameOptionsForMainMenu.xFieldsMax > 4) {
-		clonedGameOptionsForMainMenu.xFieldsMax--;
-		showOptionXFieldsMax();
-		if (clonedGameOptionsForMainMenu.xFieldsMax < clonedGameOptionsForMainMenu.xFieldsMin) {
-			onButtonXFieldsMinMinusClicked();
-		}
-	}
-}
-/**
- * Increases the maximum x fields option by 1. A value larger than 16 is not allowed.
- */
-function onButtonXFieldsMaxPlusClicked() {
-	if (clonedGameOptionsForMainMenu.xFieldsMax < 16) {
-		clonedGameOptionsForMainMenu.xFieldsMax++;
-		showOptionXFieldsMax();
-	}
-}
-
-/**
- * Updates the display of the minimum y fields option.
- */
-function showOptionYFieldsMin() {
-	document.getElementById("optionYFieldsMin").innerHTML = clonedGameOptionsForMainMenu.yFieldsMin;
-}
-/**
- * Decreases the minimum y fields option by 1. A value smaller than 4 is not allowed.
- */
-function onButtonYFieldsMinMinusClicked() {
-	if (clonedGameOptionsForMainMenu.yFieldsMin > 4) {
-		clonedGameOptionsForMainMenu.yFieldsMin--;
-		showOptionYFieldsMin();
-	}
-}
-/**
- * Increases the minimum y fields option by 1. A value larger than 16 is not allowed.
- * If the value will exceed the maximum y fields option, that value will also be increased.
- */
-function onButtonYFieldsMinPlusClicked() {
-	if (clonedGameOptionsForMainMenu.yFieldsMin < 16) {
-		clonedGameOptionsForMainMenu.yFieldsMin++;
-		showOptionYFieldsMin();
-		if (clonedGameOptionsForMainMenu.yFieldsMax < clonedGameOptionsForMainMenu.yFieldsMin) {
-			onButtonYFieldsMaxPlusClicked();
-		}
-	}
-}
-
-/**
- * Updates the display of the maximum y fields option.
- */
-function showOptionYFieldsMax() {
-	document.getElementById("optionYFieldsMax").innerHTML = clonedGameOptionsForMainMenu.yFieldsMax;
-}
-/**
- * Decreases the maximum y fields option by 1. A value smaller than 4 is not allowed.
- * If the value will be smaller than the minimum y fields option, that value will also be decreased.
- */
-function onButtonYFieldsMaxMinusClicked() {
-	if (clonedGameOptionsForMainMenu.yFieldsMax > 4) {
-		clonedGameOptionsForMainMenu.yFieldsMax--;
-		showOptionYFieldsMax();
-		if (clonedGameOptionsForMainMenu.yFieldsMax < clonedGameOptionsForMainMenu.yFieldsMin) {
-			onButtonYFieldsMinMinusClicked();
-		}
-	}
-}
-/**
- * Increases the maximum y fields option by 1. A value larger than 16 is not allowed.
- */
-function onButtonYFieldsMaxPlusClicked() {
-	if (clonedGameOptionsForMainMenu.yFieldsMax < 16) {
-		clonedGameOptionsForMainMenu.yFieldsMax++;
-		showOptionYFieldsMax();
-	}
-}
-
-/**
- * Updates the display of the minimum step count option.
- */
-function showOptionStepCountMin() {
-	document.getElementById("optionStepCountMin").innerHTML = clonedGameOptionsForMainMenu.stepCountMin;
-}
-/**
- * Decreases the minimum step count option by 1. A value smaller than 3 is not allowed.
- */
-function onButtonStepCountMinMinusClicked() {
-	if (clonedGameOptionsForMainMenu.stepCountMin > 3) {
-		clonedGameOptionsForMainMenu.stepCountMin--;
-		showOptionStepCountMin();
-	}
-}
-/**
- * Increases the minimum step count option by 1. A value larger than 20 is not allowed.
- * If the value will exceed the maximum step count option, that value will also be increased.
- */
-function onButtonStepCountMinPlusClicked() {
-	if (clonedGameOptionsForMainMenu.stepCountMin < 20) {
-		clonedGameOptionsForMainMenu.stepCountMin++;
-		showOptionStepCountMin();
-		if (clonedGameOptionsForMainMenu.stepCountMax < clonedGameOptionsForMainMenu.stepCountMin) {
-			onButtonStepCountMaxPlusClicked();
-		}
-	}
-}
-
-/**
- * Updates the display of the maximum step count option.
- */
-function showOptionStepCountMax() {
-	document.getElementById("optionStepCountMax").innerHTML = clonedGameOptionsForMainMenu.stepCountMax;
-}
-/**
- * Decreases the maximum step count option by 1. A value smaller than 4 is not allowed.
- * If the value will be smaller than the minimum step count option, that value will also be decreased.
- */
-function onButtonStepCountMaxMinusClicked() {
-	if (clonedGameOptionsForMainMenu.stepCountMax > 4) {
-		clonedGameOptionsForMainMenu.stepCountMax--;
-		showOptionStepCountMax();
-		if (clonedGameOptionsForMainMenu.stepCountMax < clonedGameOptionsForMainMenu.stepCountMin) {
-			onButtonStepCountMinMinusClicked();
-		}
-	}
-}
-/**
- * Increases the maximum step count option by 1. A value larger than 16 is not allowed.
- */
-function onButtonStepCountMaxPlusClicked() {
-	if (clonedGameOptionsForMainMenu.stepCountMax < 16) {
-		clonedGameOptionsForMainMenu.stepCountMax++;
-		showOptionStepCountMax();
-	}
 }
