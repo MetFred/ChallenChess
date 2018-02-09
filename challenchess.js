@@ -62,6 +62,7 @@ const DEFAULT_OPTIONS = {"xFieldsMin":          6,
                          "yFieldsMax":          12,
                          "replaceAfterCapture": false,
                          "captureAll":          false,
+                         "showPossibleMoves":   true,
                          "stepCountMin":        12,
                          "stepCountMax":        16,
                          "seed":                null};
@@ -236,6 +237,9 @@ function showAllOptions() {
  */
 function openMainMenu() {
 	clonedGameOptionsForMainMenu = clone(gameOptions);
+	setChecked("replaceAfterCaptureOption", clonedGameOptionsForMainMenu.replaceAfterCapture);
+	setChecked("captureAllOption", clonedGameOptionsForMainMenu.captureAll);
+	setChecked("showPossibleMovesOption", clonedGameOptionsForMainMenu.showPossibleMoves);
 	spinValuesAndLimits.xFields.minValue = clonedGameOptionsForMainMenu.xFieldsMin;
 	spinValuesAndLimits.xFields.maxValue = clonedGameOptionsForMainMenu.xFieldsMax;
 	spinValuesAndLimits.yFields.minValue = clonedGameOptionsForMainMenu.yFieldsMin;
@@ -587,7 +591,9 @@ function updatePossibleMoves() {
 	clearPossibleMoves();
 	var moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
 	moves.forEach(function (move) {
-		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
+		if (gameOptions.showPossibleMoves) {
+			fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
+		}
 		fieldMatrix[move.y][move.x].moveable = true;
 	});
 	possibleMoves = moves;
@@ -872,4 +878,37 @@ function onButtonCancelOptionsClicked() {
 function applyNewOptions() {
 	gameOptions = clonedGameOptionsForMainMenu;
 	gameOptions.seed = null;
+}
+
+/**
+ * Toggles the state of the given checkbox by adding or removing the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ */
+function toggleChecked(checkbox) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	elem.classList.toggle("checked");
+}
+
+/**
+ * Tells whether the given checkbox is checked, i.e. it contains the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ * @return {Boolean} checked state of the checkbox
+ */
+function isChecked(checkbox) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	return elem.classList.contains("checked");
+}
+
+/**
+ * Sets the checked state of the given checkbox by adding or removing the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ * @param {Boolean} value should the checkbox be checked (true) or unchecked (false)?
+ */
+function setChecked(checkbox, value) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	if (value) {
+		elem.classList.add("checked");
+	} else {
+		elem.classList.remove("checked");
+	}
 }
