@@ -519,11 +519,15 @@ function generateRandomLevel() {
 			break;
 		}
 		var move = randomGenerator.nextArrayElement(reducedMoves);
+		var newFigureType;
 		currentField = fieldMatrix[move.y][move.x];
 		if (gameOptions.replaceAfterCapture) {
 			currentColour = (currentColour == BLACK ? WHITE : BLACK);
+			newFigureType = move.figureType;
+		} else {
+			newFigureType = randomGenerator.nextArrayElement(FIGURE_LIST);
 		}
-		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
+		createFigure({x: currentField.x, y: currentField.y, type: newFigureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
 	if (gameOptions.replaceAfterCapture) {
