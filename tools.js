@@ -183,7 +183,8 @@ function createRandomNumberGenerator(seed) {
 		 * @return {Number} integer value
 		 */
 		next: function () {
-			this.number += this.number * this.seed * SQRT2;
+			this.number += this.number * SQRT2;
+			this.number *= 1000;
 			this.number -= Math.floor(this.number);
 			return this.number;
 		},
@@ -194,8 +195,14 @@ function createRandomNumberGenerator(seed) {
 		 * @return {Number} integer value
 		 */
 		nextInt: function (lowerBound, upperBound) {
-			this.next();
-			return lowerBound + Math.floor(this.number * (upperBound - lowerBound));
+			return lowerBound + Math.floor(this.next() * (upperBound - lowerBound));
+		},
+		/**
+		 * Returns a randomly generated Boolean value.
+		 * @return {Boolean} true or false, randomly selected
+		 */
+		nextBoolean: function () {
+			return this.next() < 0.5;
 		},
 		/**
 		 * Returns a randomly selected element of a given array.
@@ -218,6 +225,8 @@ function createRandomNumberGenerator(seed) {
 	var numericalSeed;
 	if (seed == null || typeof seed === "undefined" || seed == "") {
 		numericalSeed = Math.random();
+	} else if (typeof seed === "number") {
+		numericalSeed = seed;
 	} else {
 		numericalSeed = 1;
 		var s = "" + seed;
@@ -229,7 +238,7 @@ function createRandomNumberGenerator(seed) {
 		}
 	}
 	result.seed = numericalSeed;
-	result.number = result.seed * SQRT2 - Math.floor(result.seed * SQRT2);
+	result.number = numericalSeed;
 	return result;
 }
 
@@ -242,6 +251,20 @@ function createRandomNumberGenerator(seed) {
  */
 function isBetween(lowerBound, value, upperBound) {
 	return (lowerBound <= value && value <= upperBound);
+}
+
+/**
+ * Creates a new array or object containing the values of the given one.
+ * @param x source data structure
+ * @return cloned x
+ */
+function clone(x) {
+	var result = Array.isArray(x) ? [] : {};
+	for (k in x) {
+		var v = x[k];
+		result[k] = (typeof v === "object") ? clone(v) : v;
+	}
+	return result;
 }
 
 /**

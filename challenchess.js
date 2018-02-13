@@ -54,6 +54,81 @@ MOVEMENT_DIRECTION_ENUM[WHITE] = -1;
 MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 
 /**
+ * Default values for all game related options.
+ */
+const DEFAULT_OPTIONS = {"xFieldsMin":          6,
+                         "xFieldsMax":          12,
+                         "yFieldsMin":          6,
+                         "yFieldsMax":          12,
+                         "replaceAfterCapture": false,
+                         "captureAll":          false,
+                         "showPossibleMoves":   true,
+                         "stepCountMin":        12,
+                         "stepCountMax":        16,
+                         "seed":                null};
+
+/**
+ * Definition of a spin-button-adjustable value range in the main menu.
+ */
+var spinValuesAndLimits = {};
+
+/**
+ * Adds a new spin-button-adjustable value range definition for the main menu.
+ * @String name name of the value range
+ * @Number minLimit minimum value which can be chosen
+ * @Number maxLimit maximum value which can be chosen
+ */
+function addSpinValueDefinition(name, minLimit, maxLimit) {
+	spinValuesAndLimits[name] = {"minValue":     minLimit,
+		                         "maxValue":     maxLimit,
+		                         "minLimit":     minLimit,
+		                         "maxLimit":     maxLimit,
+		                         "minOptionKey": name+"Min",
+		                         "maxOptionKey": name+"Max",
+		                         "minElementId": name + "MinOption",
+		                         "maxElementId": name + "MaxOption",
+		                         "refresh": function() {
+									clonedGameOptionsForMainMenu[this.minOptionKey] = this.minValue;
+									clonedGameOptionsForMainMenu[this.maxOptionKey] = this.maxValue;
+									document.getElementById(this.minElementId).innerHTML = this.minValue;
+									document.getElementById(this.maxElementId).innerHTML = this.maxValue;
+								 },
+		                         "decreaseMin": function() {
+									if (this.minValue > this.minLimit) {
+										this.minValue--;
+										this.refresh();
+									}
+								 },
+								 "increaseMin": function() {
+									if (this.minValue < this.maxLimit) {
+										this.minValue++;
+										if (this.minValue > this.maxValue) {
+											this.maxValue = this.minValue;
+										}
+										this.refresh();
+									}
+								 },
+								 "decreaseMax": function() {
+									if (this.maxValue > this.minLimit) {
+										this.maxValue--;
+										if (this.maxValue < this.minValue) {
+											this.minValue = this.maxValue;
+										}
+										this.refresh();
+									}
+							     },
+							     "increaseMax": function() {
+									if (this.maxValue < this.maxLimit) {
+										this.maxValue++;
+										this.refresh();
+									}
+								 }};
+}
+addSpinValueDefinition("xFields", 4, 16);
+addSpinValueDefinition("yFields", 4, 16);
+addSpinValueDefinition("stepCount", 3, 20);
+
+/**
  * Name of the style which should be used. A corresponding CSS file
  * must exist (with the extension gameStyle+".css") and the images
  * must exist in the folder "img/"+gameStyle.
@@ -61,19 +136,29 @@ MOVEMENT_DIRECTION_ENUM[BLACK] = 1;
 var gameStyle = "funny";
 
 /**
+ * Dictionary of game options.
+ */
+var gameOptions = null;
+
+/**
  * Global game timer instance.
  */
 var gameTimer = null;
 
 /**
+ * Flag whether the game is still running.
+ */
+var gameRunning = null;
+
+/**
  * Number of moves the player has already done in the current game.
  */
-var numberOfMoves = 0;
+var numberOfMoves = null;
 
 /**
  * List of figures the player has already captured in the current game.
  */
-var capturedFigures = [];
+var capturedFigures = null;
 
 /**
  * Global random number generator instance.
@@ -87,7 +172,8 @@ var currentFigure = null;
 
 /**
  * The list of figures which appear in the game, including
- * currentFigure.
+ * currentFigure. A figure will be removed from this list when it is
+ * captured (but will be added to capturedFigures).
  */
 var figureList = null;
 
@@ -120,7 +206,29 @@ function initDocument() {
 		gameStyle = queryDict["style"]
 	}
 	appendCssFileToHead(gameStyle+".css");
-	window.setTimeout(initNewGame, 42, queryDict);
+	gameOptions = mergeDicts(queryDict, DEFAULT_OPTIONS);
+	if (typeof gameOptions.replaceAfterCapture === "string") {
+		gameOptions.replaceAfterCapture = gameOptions.replaceAfterCapture == "true";
+	}
+	if (typeof gameOptions.captureAll === "string") {
+		gameOptions.captureAll = gameOptions.captureAll == "true";
+	}
+	window.setTimeout(initNewGame, 42);
+}
+
+/**
+ * Cloned game options which can be manipulated in the main menu without affecting the real gameOptions.
+ * Thus, simply closing the main menu without applying any option changes leaves the real gameOptions unchanged.
+ */
+var clonedGameOptionsForMainMenu = null;
+
+/**
+ * Updates the displayed value of all options in the main menu.
+ */
+function showAllOptions() {
+	Object.values(spinValuesAndLimits).forEach(function(spinValue) {
+		spinValue.refresh();
+	});
 }
 
 /**
@@ -128,6 +236,17 @@ function initDocument() {
  * Meanwhile, the game will be faded out by activating the pause layer.
  */
 function openMainMenu() {
+	clonedGameOptionsForMainMenu = clone(gameOptions);
+	setChecked("replaceAfterCaptureOption", clonedGameOptionsForMainMenu.replaceAfterCapture);
+	setChecked("captureAllOption", clonedGameOptionsForMainMenu.captureAll);
+	setChecked("showPossibleMovesOption", clonedGameOptionsForMainMenu.showPossibleMoves);
+	spinValuesAndLimits.xFields.minValue = clonedGameOptionsForMainMenu.xFieldsMin;
+	spinValuesAndLimits.xFields.maxValue = clonedGameOptionsForMainMenu.xFieldsMax;
+	spinValuesAndLimits.yFields.minValue = clonedGameOptionsForMainMenu.yFieldsMin;
+	spinValuesAndLimits.yFields.maxValue = clonedGameOptionsForMainMenu.yFieldsMax;
+	spinValuesAndLimits.stepCount.minValue = clonedGameOptionsForMainMenu.stepCountMin;
+	spinValuesAndLimits.stepCount.maxValue = clonedGameOptionsForMainMenu.stepCountMax;
+	showAllOptions();
 	document.getElementById("main_menu").classList.remove("moved_out");
 	document.getElementById("pause_layer").classList.add("faded");
 }
@@ -141,38 +260,27 @@ function closeMainMenu() {
 }
 
 /**
- * Default values for all game related attributes.
- */
-const DEFAULT_OPTIONS = {"xFieldsMin": 8, "xFieldsMax": 12, "yFieldsMin": 8, "yFieldsMax": 12, "stepCountMin": 12, "stepCountMax": 16, "seed": null}
-
-/**
  * Updates the time in the status line at the bottom of the document.
  */
-function updateTimeInStatusLine(gameState = null) {
+function updateTimeInStatusLine() {
 	var element = document.getElementById("status_time");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gs.time)+'</span>';
+	element.innerHTML = 'time: <span class="value">'+getFormattedTime(gameTimer.time)+'</span>';
 }
 
-function updateMovesInStatusLine(gameState = null) {
+/**
+ * Updates the number of performed moves in the status line at the bottom of the document.
+ */
+function updateMovesInStatusLine() {
 	var element = document.getElementById("status_moves");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'moves: <span class="value">'+gs.moves+'</span>';
+	element.innerHTML = 'moves: <span class="value">'+numberOfMoves+'</span>';
 }
 
-function updateCapturesInStatusLine(gameState = null) {
+/**
+ * Updates the number of captured figures in the status line at the bottom of the document.
+ */
+function updateCapturesInStatusLine() {
 	var element = document.getElementById("status_captures");
-	var gs = gameState;
-	if (gs == null) {
-		gs = getCurrentGameState();
-	}
-	element.innerHTML = 'captures: <span class="value">'+gs.capturedFigures.length+'</span>';
+	element.innerHTML = 'captures: <span class="value">'+capturedFigures.length+'</span>';
 }
 
 /**
@@ -180,23 +288,22 @@ function updateCapturesInStatusLine(gameState = null) {
  * at the bottom of the document.
  */
 function updateStatusLine() {
-	var gameState = getCurrentGameState();
-	updateTimeInStatusLine(gameState);
-	updateMovesInStatusLine(gameState);
-	updateCapturesInStatusLine(gameState);
+	updateTimeInStatusLine();
+	updateMovesInStatusLine();
+	updateCapturesInStatusLine();
 }
 
 /**
- * Initialises a new game using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Initialises a new game using the current gameOptions.
  */
-function initNewGame(options={}) {
-	var opts = mergeDicts(options, DEFAULT_OPTIONS);
-	randomGenerator = createRandomNumberGenerator(options.seed);
-	initChessboard(opts);
-	generateRandomLevel(opts);
+function initNewGame() {
+	gameRunning = true;
+	randomGenerator = createRandomNumberGenerator(gameOptions.seed);
+	initChessboard();
+	generateRandomLevel();
 	repositionAllFigures();
+	numberOfMoves = 0;
+	capturedFigures = [];
 	updatePossibleMoves();
 	if (gameTimer == null) {
 		gameTimer = createGameTimer();
@@ -204,8 +311,6 @@ function initNewGame(options={}) {
 	}
 	gameTimer.reset();
 	gameTimer.start();
-	numberOfMoves = 0;
-	capturedFigures = [];
 	updateStatusLine();
 }
 
@@ -220,9 +325,21 @@ function fieldClicked(field) {
 		clearPossibleMoves();
 		window.setTimeout(function() {
 			moveEnded(figureOnTargetField);
-			updatePossibleMoves();
+			if (gameRunning) {
+				updatePossibleMoves();
+			} else {
+				clearPossibleMoves();
+			}
 		}, 750);
 	}
+}
+
+/**
+ * Tells whether the current figure is still able to move.
+ * @return {Boolean} flag about the figure's agility
+ */
+function currentFigureCanMove() {
+	return possibleMoves.length > 0;
 }
 
 /**
@@ -248,12 +365,34 @@ function moveEnded(figureOnTargetField) {
 		++numberOfMoves;
 		if (figureOnTargetField != null) {
 			capturedFigures.push(figureOnTargetField);
-			removeFigure(currentFigure);
-			currentFigure = figureOnTargetField;
+			if (gameOptions.replaceAfterCapture) {
+				removeFigure(currentFigure);
+				currentFigure = figureOnTargetField;
+			} else {
+				removeFigure(figureOnTargetField);
+			}
 		}
 		currentFigure.domElement.classList.remove("walking");
 		currentFigure.domElement.classList.add("idle");
 		updateStatusLine();
+		destinationField = fieldMatrix[currentFigure.y][currentFigure.x];
+		checkAndHandleGameEnd(destinationField);
+	}
+}
+
+/**
+ * Checks whether the current game's end conditions are fulfilled.
+ * If so, stop the game and decide whether the game has successfully
+ * been solved, or not. Display a corresponding message.
+ * @param {Object} destinationField destination of the last move
+ */
+function checkAndHandleGameEnd(destinationField) {
+	if (destinationField.domElement.classList.contains("target_field")) {
+		if (figureList.length == 1 || !gameOptions.captureAll) {
+			stopGame(true);
+		} else {
+			stopGame(false, "You did not capture all figures.")
+		}
 	}
 }
 
@@ -265,25 +404,37 @@ function moveEnded(figureOnTargetField) {
 function removeFigure(figure) {
 	if (figure != null) {
 		fieldMatrix[figure.y][figure.x].figure = null;
-		var boardArea = document.getElementById("board_area");
+		var boardArea = document.getElementById("figures");
 		boardArea.removeChild(figure.domElement);
+		var figureIndex = figureList.indexOf(figure);
+		if (figureIndex >= 0) {
+			figureList.splice(figureIndex, 1);
+		}
 	}
 }
 
 /**
- * Initialises a chess board using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Clears the current chessboard, if there is any from a previous game.
  */
-function initChessboard(options) {
+function clearChessboard() {
+	fieldMatrix = [];
 	var board = document.getElementById("board");
 	board.innerHTML = "";  // delete old content
-	var xFields = randomGenerator.nextInt(parseInt(options.xFieldsMin), parseInt(options.xFieldsMax) + 1);
-	var yFields = randomGenerator.nextInt(parseInt(options.yFieldsMin), parseInt(options.yFieldsMax) + 1);
+	board.className = "";  // clear classList
+	possibleMoves = null;
+}
+
+/**
+ * Initialises a chess board using the current gameOptions.
+ */
+function initChessboard() {
+	clearChessboard();
+	var board = document.getElementById("board");
+	var xFields = randomGenerator.nextInt(parseInt(gameOptions.xFieldsMin), parseInt(gameOptions.xFieldsMax) + 1);
+	var yFields = randomGenerator.nextInt(parseInt(gameOptions.yFieldsMin), parseInt(gameOptions.yFieldsMax) + 1);
 	var className = "board"+xFields+"x"+yFields;
 	addCssClassToHead("."+className, "display:grid;grid-template-rows:repeat("+yFields+",1fr);grid-template-columns:repeat("+xFields+",1fr);");
 	board.classList.add(className);
-	fieldMatrix = [];
 	var blackWhiteOffset = yFields % 2;  // lower left field must be black
 	for (var y = 0; y < yFields; ++y) {
 		fieldMatrix.push([]);
@@ -320,20 +471,35 @@ function createField(x, y, blackWhiteOffset) {
 }
 
 /**
- * Generates a random level using the given options.
- * @param {Object} options if a specific option is not present here,
- *                         it will be taken from DEFAULT_OPTIONS
+ * Clears old figures if there are some from a previous game.
  */
-function generateRandomLevel(options) {
+function clearFigures() {
+	figureList = null;
+	currentFigure = null;
+	capturedFigures = null;
+	document.getElementById("figures").innerHTML = "";  // delete old figures
+}
+
+/**
+ * Generates a random level using the current gameOptions.
+ */
+function generateRandomLevel() {
+	clearFigures();
+	figureList = [];
 	var currentField = randomGenerator.nextArrayElement(randomGenerator.nextArrayElement(fieldMatrix));
 	var currentColour = BLACK;
-	var stepCount = randomGenerator.nextInt(parseInt(options.stepCountMin), parseInt(options.stepCountMax));
-	figureList = [];
+	var stepCount = randomGenerator.nextInt(parseInt(gameOptions.stepCountMin), parseInt(gameOptions.stepCountMax));
 	currentField.domElement.classList.add("target_field");
 	createFigure({x: currentField.x, y: currentField.y, type: KING, colour: currentColour});
+	var usedFigureList = []
+	if (gameOptions.replaceAfterCapture) {
+		usedFigureList = FIGURE_LIST;
+	} else {
+		usedFigureList = [randomGenerator.nextArrayElement(FIGURE_LIST)];
+	}
 	for (var i=0;i<stepCount;++i) {
 		var possibleMoves = [];
-		FIGURE_LIST.forEach(function (figureType) {
+		usedFigureList.forEach(function (figureType) {
 			getPossibleMoves(currentField, figureType, currentColour, CAPTURE_MOVEMENT_ENUM, false).forEach(function (possibleMove) {
 				possibleMoves.push(possibleMove);
 			});
@@ -357,12 +523,23 @@ function generateRandomLevel(options) {
 			break;
 		}
 		var move = randomGenerator.nextArrayElement(reducedMoves);
+		var newFigureType;
 		currentField = fieldMatrix[move.y][move.x];
-		currentColour = (currentColour == BLACK ? WHITE : BLACK);
-		createFigure({x: currentField.x, y: currentField.y, type: move.figureType, colour: currentColour});
+		if (gameOptions.replaceAfterCapture) {
+			currentColour = (currentColour == BLACK ? WHITE : BLACK);
+			newFigureType = move.figureType;
+		} else {
+			newFigureType = randomGenerator.nextArrayElement(FIGURE_LIST);
+		}
+		createFigure({x: currentField.x, y: currentField.y, type: newFigureType, colour: currentColour});
 	}
 	currentField.domElement.classList.add("start_field");
-	currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
+	if (gameOptions.replaceAfterCapture) {
+		currentFigure = fieldMatrix[currentField.y][currentField.x].figure;
+	} else {
+		removeFigure(fieldMatrix[currentField.y][currentField.x].figure);
+		currentFigure = createFigure({x: currentField.x, y: currentField.y, type: usedFigureList[0], colour: WHITE});
+	}
 	currentFigure.domElement.classList.add("current_figure");
 	currentFigure.domElement.classList.add("idle");
 }
@@ -377,12 +554,12 @@ function generateRandomLevel(options) {
  */
 function createFigure(options) {
 	var result = options;
-	var boardArea = document.getElementById("board_area");
-	var figure = document.createElement("img");
-	result.domElement = figure;
-	figure.classList.add("figure");
-	figure.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
-	boardArea.appendChild(figure);
+	var figuresDomElement = document.getElementById("figures");
+	var figureImageElement = document.createElement("img");
+	result.domElement = figureImageElement;
+	figureImageElement.classList.add("figure");
+	figureImageElement.src = "img/" + gameStyle + "/" + result.type + "_" + result.colour + ".svg";
+	figuresDomElement.appendChild(figureImageElement);
 	figureList.push(result);
 	fieldMatrix[options.y][options.x].figure = result;
 	return result;
@@ -392,14 +569,14 @@ function createFigure(options) {
  * Saves the moving target fields whose class list can later be updated rather than
  * updating all field's class lists.
  */
-var oldMoves = null;
+var possibleMoves = null;
 
 /**
- * Removes the possible_move CSS class from the fields of oldMoves and sets the moveable flag to false.
+ * Removes the possible_move CSS class from the fields of possibleMoves and sets the moveable flag to false.
  */
 function clearPossibleMoves() {
-	if (oldMoves != null) {
-		oldMoves.forEach(function (move) {
+	if (possibleMoves != null) {
+		possibleMoves.forEach(function (move) {
 			fieldMatrix[move.y][move.x].domElement.classList.remove("possible_move");
 			fieldMatrix[move.y][move.x].moveable = false;
 		});
@@ -412,12 +589,17 @@ function clearPossibleMoves() {
  */
 function updatePossibleMoves() {
 	clearPossibleMoves();
-	moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
+	var moves = getPossibleMoves(currentFigure, currentFigure.type, currentFigure.colour, CAPTURE_MOVEMENT_ENUM, true);
 	moves.forEach(function (move) {
-		fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
+		if (gameOptions.showPossibleMoves) {
+			fieldMatrix[move.y][move.x].domElement.classList.add("possible_move");
+		}
 		fieldMatrix[move.y][move.x].moveable = true;
 	});
-	oldMoves = moves;
+	possibleMoves = moves;
+	if (gameRunning && !currentFigureCanMove()) {
+		stopGame(false, "The current figure can no longer move.");
+	}
 }
 
 /**
@@ -560,9 +742,11 @@ function repositionChessboard() {
  * on the chess board.
  */
 function repositionAllFigures() {
-	figureList.forEach(function(figure) {
-		repositionFigure(figure);
-	});
+	if (figureList != null) {
+		figureList.forEach(function(figure) {
+			repositionFigure(figure);
+		});
+	}
 }
 
 /**
@@ -598,15 +782,133 @@ function documentResized(event) {
 	repositionAllFigures();
 }
 
-// TODO
+/**
+ * Tells whether the game is still running with respect to fulfilled
+ * end conditions.
+ */
 function isGameRunning() {
-	return true;
+	return gameRunning;
 }
 
-// TODO
-function getCurrentGameState() {
-	return {solved: false,
-		    time: gameTimer.time,
-		    moves: numberOfMoves,
-		    capturedFigures: capturedFigures};
+/**
+ * Stops the game.
+ * @param {Boolean} has the game successfully been solved?
+ * @param {String} message text telling why the player has lost the game
+ */
+function stopGame(solved, messageText) {
+	gameTimer.pause();
+	gameRunning = false;
+	updateStatusLine();
+	if (solved) {
+		document.getElementById("game_end_message").innerHTML = "Congratulations!<br />You solved this challenge.";
+	} else {
+		document.getElementById("game_end_message").innerHTML = "Sorry, you failed.<br />" + messageText;
+	}
+	openGameEndDialogue();
+}
+
+/**
+ * Opens (shows) the game end dialogue.
+ */
+function openGameEndDialogue() {
+	document.getElementById("game_end_dialogue").classList.add("visible");
+	document.getElementById("pause_layer").classList.add("faded");
+}
+
+/**
+ * Closes (hides) the game end dialogue.
+ */
+function closeGameEndDialogue() {
+	document.getElementById("game_end_dialogue").classList.remove("visible");
+	document.getElementById("pause_layer").classList.remove("faded");
+}
+
+/**
+ * Inits the game using the same seed for the random number generator.
+ */
+function onButtonRetryClicked() {
+	closeGameEndDialogue();
+	gameOptions.seed = randomGenerator.seed;  // take the same seed in order to recreate the same level
+	initNewGame();
+}
+
+/**
+ * Inits a new game using the same options as before.
+ */
+function onButtonNewGameClicked() {
+	closeGameEndDialogue();
+	gameOptions.seed = null;  // will take a new, random seed, and thus probably creates a different level
+	initNewGame();
+}
+
+/**
+ * Closes the dialogue and opens the main menu instead.
+ */
+function onButtonMenuClicked() {
+	closeGameEndDialogue();
+	openMainMenu();
+}
+
+/**
+ * Closes the dialogue.
+ */
+function onButtonBackToGameClicked() {
+	closeGameEndDialogue();
+}
+
+/**
+ * Applies changed options, closes the main menu, and starts a new game using the new options.
+ */
+function onButtonApplyOptionsClicked() {
+	applyNewOptions();
+	closeMainMenu();
+	initNewGame();
+}
+
+/**
+ * Closes the main menu without applying any option changes.
+ */
+function onButtonCancelOptionsClicked() {
+	closeMainMenu();
+}
+
+/**
+ * Copies the options from the main menu to the gameOptions so a new game can be startet using them.
+ */
+function applyNewOptions() {
+	gameOptions = clonedGameOptionsForMainMenu;
+	gameOptions.seed = null;
+}
+
+/**
+ * Toggles the state of the given checkbox by adding or removing the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ */
+function toggleChecked(checkbox) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	elem.classList.toggle("checked");
+}
+
+/**
+ * Tells whether the given checkbox is checked, i.e. it contains the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ * @return {Boolean} checked state of the checkbox
+ */
+function isChecked(checkbox) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	return elem.classList.contains("checked");
+}
+
+/**
+ * Sets the checked state of the given checkbox by adding or removing the "checked" CSS class.
+ * @param {Object} checkbox DOM element
+ * @param {Boolean} value should the checkbox be checked (true) or unchecked (false)?
+ */
+function setChecked(checkbox, value) {
+	var elem = typeof checkbox === "string" ? document.getElementById(checkbox) : checkbox;
+	if (value) {
+		elem.classList.add("checked");
+	} else {
+		elem.classList.remove("checked");
+	}
 }
