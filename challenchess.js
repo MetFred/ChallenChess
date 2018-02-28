@@ -207,6 +207,9 @@ function initDocument() {
 	}
 	appendCssFileToHead(gameStyle+".css");
 	gameOptions = mergeDicts(queryDict, DEFAULT_OPTIONS);
+	if (gameOptions.seed == null) {
+		gameOptions.seed = generateStringSeed(gameOptions);
+	}
 	if (typeof gameOptions.replaceAfterCapture === "string") {
 		gameOptions.replaceAfterCapture = gameOptions.replaceAfterCapture == "true";
 	}
@@ -214,6 +217,20 @@ function initDocument() {
 		gameOptions.captureAll = gameOptions.captureAll == "true";
 	}
 	window.setTimeout(initNewGame, 42);
+}
+
+/**
+ * Generates a string seed value based on the passed game options.
+ * @param {Object} options game options object
+ * @return {String} string seed
+ */
+function generateStringSeed(options) {
+	var result = "";
+	var x = Math.floor(Math.random() * (options.xFieldsMax - options.xFieldsMin)) + options.xFieldsMin;
+	var y = Math.floor(Math.random() * (options.yFieldsMax - options.yFieldsMin)) + options.yFieldsMin;
+	var steps = Math.floor(Math.random() * (options.stepCountMax - options.stepCountMin)) + options.stepCountMin;
+	var replaceAfterCapture = options.replaceAfterCapture ? 1 : 0;
+	var captureAll = options.captureAll ? 1 : 0;
 }
 
 /**
@@ -246,6 +263,7 @@ function openMainMenu() {
 	spinValuesAndLimits.yFields.maxValue = clonedGameOptionsForMainMenu.yFieldsMax;
 	spinValuesAndLimits.stepCount.minValue = clonedGameOptionsForMainMenu.stepCountMin;
 	spinValuesAndLimits.stepCount.maxValue = clonedGameOptionsForMainMenu.stepCountMax;
+	document.getElementById("seedOption").innerHTML = randomGenerator.stringSeed;
 	showAllOptions();
 	document.getElementById("main_menu").classList.remove("moved_out");
 	document.getElementById("pause_layer").classList.add("faded");
@@ -828,7 +846,7 @@ function closeGameEndDialogue() {
  */
 function onButtonRetryClicked() {
 	closeGameEndDialogue();
-	gameOptions.seed = randomGenerator.seed;  // take the same seed in order to recreate the same level
+	gameOptions.seed = randomGenerator.stringSeed;  // take the same seed in order to recreate the same level
 	initNewGame();
 }
 
@@ -877,7 +895,6 @@ function onButtonCancelOptionsClicked() {
  */
 function applyNewOptions() {
 	gameOptions = clonedGameOptionsForMainMenu;
-	gameOptions.seed = null;
 }
 
 /**

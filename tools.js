@@ -169,6 +169,30 @@ function getElementBounds(element) {
 }
 
 /**
+ * valid characters for the stringSeed of the randomGenerator
+ */
+const seedCharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+/**
+ * Converts an integer value to a seed character.
+ * @param {Number} n integer value
+ * @return {String} character from the zero-based nth position of the seed characters
+ */
+function intToSeedChar(n) {
+	return seedCharacters.charAt(Math.abs(n) % 64);
+}
+
+/**
+ * Converts a seed character to an integer value.
+ * @param {String} seedChar a single character to be converted
+ * @return {Number} integer value - or null if it is not a valid seed character
+ */
+function seedCharToInt(seedChar) {
+	var result = seedChar.length == 1 ? seedCharacters.indexOf(seedChar) : -1;
+	return result >= 0 ? result : null;
+}
+
+/**
  * Creates a new object to generate random numbers. If a seed is given the generated
  * numbers will be always the same  depending on the seed and the previous generated number.
  * @param seed value for determination of the next random value, if null it will be taken from Math.random()
@@ -176,6 +200,7 @@ function getElementBounds(element) {
  */
 function createRandomNumberGenerator(seed) {
 	result = {
+		stringSeed: null,
 		seed: null,
 	    number: null,
 		/**
@@ -222,23 +247,24 @@ function createRandomNumberGenerator(seed) {
 			return key == null ? [null, null] : [key, object[key]];
 		}
 	};
-	var numericalSeed;
-	if (seed == null || typeof seed === "undefined" || seed == "") {
-		numericalSeed = Math.random();
-	} else if (typeof seed === "number") {
-		numericalSeed = seed;
-	} else {
-		numericalSeed = 1;
-		var s = "" + seed;
-		for (var i = 0; i < s.length; ++i) {
-			numericalSeed = (numericalSeed * s.charCodeAt(i)) >> 4;
-			if (numericalSeed > 1000000000) {
-				numericalSeed >>= 4;
-			}
+	result.stringSeed = seed;
+	if (result.stringSeed == null || typeof result.stringSeed != "string" || result.stringSeed == "") {
+		result.stringSeed = "";
+	}
+	while (result.stringSeed.length < 7) {
+		result.stringSeed += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/".charAt(Math.floor(Math.random()*64));
+	}
+	if (result.stringSeed.length > 7) {
+		result.stringSeed = result.stringSeed.substring(0, 7);
+	}
+	result.seed = 1;
+	for (var i = 0; i < result.stringSeed.length; ++i) {
+		result.seed = (result.seed * result.stringSeed.charCodeAt(i)) >> 4;
+		if (result.seed > 1000000000) {
+			result.seed >>= 4;
 		}
 	}
-	result.seed = numericalSeed;
-	result.number = numericalSeed;
+	result.number = result.seed;
 	return result;
 }
 
